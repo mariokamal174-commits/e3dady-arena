@@ -34,8 +34,7 @@ export function TeamCard({ team, status, bump, rank, onClick, compact }: Props) 
       layout
       disabled={!clickable}
       onClick={onClick}
-      whileHover={clickable ? { scale: 1.03, y: -4 } : undefined}
-      whileTap={clickable ? { scale: 0.97 } : undefined}
+      {...(clickable ? { whileHover: { scale: 1.03, y: -4 }, whileTap: { scale: 0.97 } } : {})}
       animate={highlight ? { scale: 1.02 } : { scale: 1 }}
       className={cn(
         "glass relative overflow-hidden rounded-2xl px-4 py-4 text-left transition-opacity",

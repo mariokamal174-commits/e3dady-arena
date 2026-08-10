@@ -18,8 +18,7 @@ export function AnswerButton({ index, text, disabled, state, accent, onClick }: 
       type="button"
       disabled={disabled}
       onClick={onClick}
-      whileHover={disabled ? undefined : { scale: 1.02, y: -3 }}
-      whileTap={disabled ? undefined : { scale: 0.97 }}
+      {...(disabled ? {} : { whileHover: { scale: 1.02, y: -3 }, whileTap: { scale: 0.97 } })}
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.06 * index, type: "spring", stiffness: 260, damping: 22 }}
