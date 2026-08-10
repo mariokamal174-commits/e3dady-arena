@@ -359,6 +359,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const id = window.setTimeout(() => dispatch({ type: "CLEAR_FEEDBACK" }), 1800);
       return () => window.clearTimeout(id);
     }
+    return undefined;
   }, [state.feedback]);
 
   useEffect(() => {
