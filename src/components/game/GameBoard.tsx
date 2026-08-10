@@ -70,6 +70,10 @@ export function GameBoard() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer]);
 
+  useEffect(() => {
+    if (state.phase === "idle") dispatch({ type: "START_GAME" });
+  }, [state.phase, dispatch]);
+
   if (state.phase === "over") return <WinnerScreen />;
 
   if (!question) {
@@ -86,7 +90,7 @@ export function GameBoard() {
     );
   }
 
-  const badge = PHASE_BADGE[state.phase] ?? PHASE_BADGE.idle!;
+  const badge = PHASE_BADGE[state.phase] ?? PHASE_BADGE["idle"]!;
   const spotlightTeam = activeTeam ?? turnTeam;
 
   return (
