@@ -49,7 +49,7 @@ export function WinnerScreen() {
             <motion.div
               key={team.id}
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: PODIUM_HEIGHT[rankIndex], opacity: 1 }}
+              animate={{ height: PODIUM_HEIGHT[rankIndex] ?? 120, opacity: 1 }}
               transition={{ delay: 0.3 + rankIndex * 0.15, type: "spring", stiffness: 120, damping: 18 }}
               className="glass relative flex w-32 flex-col items-center justify-start overflow-hidden rounded-t-3xl px-3 pt-4 md:w-52"
               style={{ boxShadow: `0 0 0 1px ${team.color}, 0 -20px 60px -40px ${team.color}` }}
