@@ -32,9 +32,7 @@ export function AnswerButton({ index, text, disabled, state, accent, onClick }: 
         disabled && state === "default" && "opacity-70",
       )}
       style={
-        accent && state === "default" && !disabled
-          ? { boxShadow: `inset 0 0 0 1px ${accent}33` }
-          : undefined
+        accent && state === "default" && !disabled ? { boxShadow: `inset 0 0 0 1px ${accent}33` } : {}
       }
     >
       <span
@@ -46,7 +44,7 @@ export function AnswerButton({ index, text, disabled, state, accent, onClick }: 
               ? "bg-destructive text-destructive-foreground"
               : "bg-white/10",
         )}
-        style={accent && state === "default" ? { backgroundColor: `${accent}33` } : undefined}
+        style={accent && state === "default" ? { backgroundColor: `${accent}33` } : {}}
       >
         {LETTERS[index]}
       </span>
