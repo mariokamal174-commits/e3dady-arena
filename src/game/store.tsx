@@ -293,6 +293,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const hydrated = useRef(false);
 
   useEffect(() => {
+    if (hydrated.current) return;
     const persisted = loadPersisted();
     if (persisted) dispatch({ type: "HYDRATE", state: persisted });
     hydrated.current = true;

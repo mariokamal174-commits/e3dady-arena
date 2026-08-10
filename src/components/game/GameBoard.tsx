@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useGame } from "@/game/store";
@@ -70,9 +70,15 @@ export function GameBoard() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer]);
 
+  const started = useRef(false);
   useEffect(() => {
-    if (state.phase === "idle") dispatch({ type: "START_GAME" });
-  }, [state.phase, dispatch]);
+    if (started.current) return;
+    const id = window.setTimeout(() => {
+      started.current = true;
+      dispatch({ type: "START_GAME" });
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [dispatch]);
 
   if (state.phase === "over") return <WinnerScreen />;
 
