@@ -80,10 +80,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Quiz Arena — Live Team Quiz Game Show" },
       {
         name: "description",
-        content: "A projector-ready live team quiz with steal mode, speed rounds and animated scoring.",
+        content: "Set up teams, timers and points, then run a projector-ready live quiz with steal mode, speed rounds, confetti and sound effects.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "Quiz Arena — Live Team Quiz Game Show" },
+      { name: "twitter:title", content: "Quiz Arena — Live Team Quiz Game Show" },
+      { property: "og:description", content: "Set up teams, timers and points, then run a projector-ready live quiz with steal mode, speed rounds, confetti and sound effects." },
+      { name: "twitter:description", content: "Set up teams, timers and points, then run a projector-ready live quiz with steal mode, speed rounds, confetti and sound effects." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8102673d-1d54-498b-bad2-ff63330e9005" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8102673d-1d54-498b-bad2-ff63330e9005" },
     ],
     links: [
       {
@@ -96,7 +102,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Outfit:wght@300..800&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,

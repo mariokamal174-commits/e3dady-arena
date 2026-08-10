@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Quiz Arena — Live Team Quiz Game Show" },
       {
         property: "og:description",
-        content: "A TV-style team quiz you can run live: steal mode, speed rounds, animated scoring.",
+        content: "Set up teams, timers and points, then run a projector-ready live quiz with steal mode, speed rounds, confetti and sound effects.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
