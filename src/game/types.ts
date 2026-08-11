@@ -1,4 +1,4 @@
-export type QuestionType = "normal" | "steal" | "speed";
+export type QuestionType = "normal" | "steal" | "speed" | "oral";
 
 export interface Question {
   id: string;

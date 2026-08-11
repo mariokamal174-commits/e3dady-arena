@@ -45,6 +45,7 @@ const TYPES: { value: QuestionType; label: string }[] = [
   { value: "normal", label: "Normal" },
   { value: "steal", label: "Steal" },
   { value: "speed", label: "⚡ Speed" },
+  { value: "oral", label: "🗣️ Oral" },
 ];
 
 function emptyQuestion(points: number): Question {
@@ -134,8 +135,21 @@ function Admin() {
                 className="rounded-full px-3 py-1 text-[10px] font-black tracking-[0.15em]"
                 style={{
                   backgroundColor:
-                    q.type === "speed" ? "#facc1522" : q.type === "steal" ? "#f43f5e22" : "#38bdf822",
-                  color: q.type === "speed" ? "#facc15" : q.type === "steal" ? "#f43f5e" : "#38bdf8",
+                    q.type === "speed"
+                      ? "#facc1522"
+                      : q.type === "steal"
+                        ? "#f43f5e22"
+                        : q.type === "oral"
+                          ? "#a78bfa22"
+                          : "#38bdf822",
+                  color:
+                    q.type === "speed"
+                      ? "#facc15"
+                      : q.type === "steal"
+                        ? "#f43f5e"
+                        : q.type === "oral"
+                          ? "#a78bfa"
+                          : "#38bdf8",
                 }}
               >
                 {q.type.toUpperCase()}

@@ -3,14 +3,16 @@ import type { GameState, Team } from "@/game/types";
 import { useGame } from "@/game/store";
 
 export function Scoreboard({ state }: { state: GameState }) {
-  const { adminUnlocked } = useGame();
+  const { adminUnlocked, dispatch, question } = useGame();
   const ranked = [...state.teams].sort((a, b) => b.score - a.score);
   const rankOf = (team: Team) => ranked.findIndex((t) => t.id === team.id) + 1;
+  const isOralQuestion = state.phase === "question" && question?.type === "oral";
 
   const statusOf = (team: Team): TeamStatus => {
     const attempted = state.attemptedTeamIds.includes(team.id);
     switch (state.phase) {
       case "question":
+        if (isOralQuestion) return state.activeTeamId === team.id ? "buzzing" : "waiting";
         return state.turnTeamId === team.id ? "turn" : "waiting";
       case "steal-select":
         return attempted ? "eliminated" : "can-steal";
@@ -33,6 +35,7 @@ export function Scoreboard({ state }: { state: GameState }) {
           status={statusOf(team)}
           rank={rankOf(team)}
           hideScore={!adminUnlocked}
+          onClick={isOralQuestion ? () => dispatch({ type: "ORAL_SELECT", teamId: team.id }) : undefined}
           {...(state.scoreBumps[team.id] ? { bump: state.scoreBumps[team.id] } : {})}
         />
       ))}

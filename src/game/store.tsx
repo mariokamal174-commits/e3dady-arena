@@ -50,6 +50,8 @@ export type Action =
   | { type: "TICK" }
   | { type: "EXPIRE" }
   | { type: "ANSWER"; choice: number }
+  | { type: "ORAL_SELECT"; teamId: string }
+  | { type: "ORAL_RESULT"; teamId: string; correct: boolean }
   | { type: "CLAIM"; teamId: string }
   | { type: "NEXT" }
   | { type: "PREV" }
@@ -166,6 +168,15 @@ export function reducer(state: GameState, action: Action): GameState {
     case "EXPIRE": {
       const question = currentQuestion(state);
       if (state.phase === "question") {
+        if (question?.type === "oral") {
+          return {
+            ...state,
+            running: false,
+            phase: "reveal",
+            revealed: true,
+            feedback: { kind: "timeup" },
+          };
+        }
         return {
           ...state,
           running: false,
@@ -206,6 +217,30 @@ export function reducer(state: GameState, action: Action): GameState {
           ? (state.settings.stealPoints ?? question.points)
           : question.points;
       return award(withChoice, teamId, points);
+    }
+    case "ORAL_SELECT": {
+      if (!currentQuestion(state)?.type || currentQuestion(state)?.type !== "oral") return state;
+      return {
+        ...state,
+        activeTeamId: action.teamId,
+        running: false,
+        feedback: null,
+      };
+    }
+    case "ORAL_RESULT": {
+      const question = currentQuestion(state);
+      if (!question || question.type !== "oral") return state;
+      if (action.correct) {
+        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, question.points);
+      }
+      return {
+        ...state,
+        activeTeamId: action.teamId,
+        running: false,
+        phase: "reveal",
+        revealed: true,
+        feedback: { kind: "wrong", teamId: action.teamId },
+      };
     }
     case "CLAIM": {
       if (state.attemptedTeamIds.includes(action.teamId)) return state;

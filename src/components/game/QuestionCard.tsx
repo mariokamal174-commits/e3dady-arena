@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<Question["type"], string> = {
   normal: "NORMAL QUESTION",
   steal: "STEAL QUESTION",
   speed: "⚡ SPEED QUESTION",
+  oral: "🗣️ ORAL QUESTION",
 };
 
 export function QuestionCard({
@@ -71,46 +72,53 @@ export function QuestionCard({
         {question.text}
       </h2>
 
-      {choicesHidden ? (
+      {question.type === "oral" ? (
+        <div className="relative mt-8 rounded-2xl border border-dashed border-violet-400/40 bg-violet-500/10 p-6 text-violet-100">
+          <p className="text-[11px] font-black tracking-[0.2em] text-violet-200/80">SPOKEN ROUND</p>
+          <p className="mt-3 text-lg font-semibold">
+            هذا سؤال مقالي. يقرأه المذيع بصوت عالي، ثم يختار الفريق الذي أجاب صحيحاً أو خطأً يدويًا.
+          </p>
+        </div>
+      ) : choicesHidden ? (
         <div className="relative mt-8 grid place-items-center rounded-2xl border border-dashed border-white/20 bg-white/5 py-14">
           <p className="font-display text-2xl font-black tracking-[0.2em] text-muted-foreground">
             الاختيارات مخفية
           </p>
         </div>
       ) : (
-      <div className="relative mt-8 grid gap-4 md:grid-cols-2">
-        {question.choices.map((choice, i) => {
-          if (removedChoices.includes(i)) {
-            return (
-              <div
-                key={`${question.id}-removed-${i}`}
-                className="rounded-2xl border border-dashed border-white/15 bg-white/5 opacity-40"
-              />
-            );
-          }
-          const isCorrect = i === question.correctIndex;
-          const state = revealed
-            ? isCorrect
-              ? "correct"
+        <div className="relative mt-8 grid gap-4 md:grid-cols-2">
+          {question.choices.map((choice, i) => {
+            if (removedChoices.includes(i)) {
+              return (
+                <div
+                  key={`${question.id}-removed-${i}`}
+                  className="rounded-2xl border border-dashed border-white/15 bg-white/5 opacity-40"
+                />
+              );
+            }
+            const isCorrect = i === question.correctIndex;
+            const state = revealed
+              ? isCorrect
+                ? "correct"
+                : selected === i
+                  ? "wrong"
+                  : "muted"
               : selected === i
                 ? "wrong"
-                : "muted"
-            : selected === i
-              ? "wrong"
-              : "default";
-          return (
-            <AnswerButton
-              key={`${question.id}-${i}`}
-              index={i}
-              text={choice}
-              state={state}
-              disabled={!canAnswer}
-              {...(accent ? { accent } : {})}
-              onClick={() => onAnswer(i)}
-            />
-          );
-        })}
-      </div>
+                : "default";
+            return (
+              <AnswerButton
+                key={`${question.id}-${i}`}
+                index={i}
+                text={choice}
+                state={state}
+                disabled={!canAnswer}
+                {...(accent ? { accent } : {})}
+                onClick={() => onAnswer(i)}
+              />
+            );
+          })}
+        </div>
       )}
 
       {revealed && question.explanation ? (

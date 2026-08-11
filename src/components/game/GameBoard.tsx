@@ -108,6 +108,7 @@ export function GameBoard() {
 
   const badge = PHASE_BADGE[state.phase] ?? PHASE_BADGE["idle"]!;
   const spotlightTeam = activeTeam ?? turnTeam;
+  const oralJudgeTeam = question?.type === "oral" ? state.teams.find((team) => team.id === state.activeTeamId) : null;
 
   return (
     <div className="min-h-screen px-4 py-5 md:px-8">
@@ -192,6 +193,51 @@ export function GameBoard() {
               />
             )}
           </AnimatePresence>
+
+          {question.type === "oral" && state.phase === "question" && state.activeTeamId ? (
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass rounded-3xl border border-violet-400/40 bg-violet-500/10 p-5"
+            >
+              <p className="text-[10px] font-black tracking-[0.22em] text-violet-200/80">ORAL JUDGE</p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">الفريق المختار</p>
+                  <p className="font-display text-2xl font-black" style={{ color: oralJudgeTeam?.color ?? "#a78bfa" }}>
+                    {oralJudgeTeam?.icon} {oralJudgeTeam?.name}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="rounded-full bg-success text-success-foreground hover:bg-success/90"
+                    onClick={() =>
+                      dispatch({
+                        type: "ORAL_RESULT",
+                        teamId: state.activeTeamId!,
+                        correct: true,
+                      })
+                    }
+                  >
+                    صح
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="rounded-full border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    onClick={() =>
+                      dispatch({
+                        type: "ORAL_RESULT",
+                        teamId: state.activeTeamId!,
+                        correct: false,
+                      })
+                    }
+                  >
+                    غلط
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          ) : null}
 
           {state.phase === "reveal" ? (
             <motion.div
