@@ -7,6 +7,7 @@ import { playSound } from "@/game/audio";
 import { CountdownTimer } from "./CountdownTimer";
 import { FeedbackOverlay } from "./FeedbackOverlay";
 import { GameControls } from "./GameControls";
+import { LifelinePanel } from "./LifelinePanel";
 import { QuestionCard } from "./QuestionCard";
 import { Scoreboard } from "./Scoreboard";
 import { SpeedQuestion } from "./SpeedQuestion";
@@ -53,6 +54,8 @@ export function GameBoard() {
       else if (key === "p") dispatch({ type: "PREV" });
       else if (key === "r") dispatch({ type: "RESTART_QUESTION" });
       else if (key === "a") dispatch({ type: "REVEAL" });
+      else if (key === "h") dispatch({ type: "TOGGLE_CHOICES" });
+      else if (key === "s") dispatch({ type: "TOGGLE_SCORES" });
       else if (["1", "2", "3", "4"].includes(key)) {
         const idx = Number(key) - 1;
         if (state.phase === "steal-select" || state.phase === "speed-open") {
@@ -126,7 +129,8 @@ export function GameBoard() {
                 {state.phase === "question" ? "CURRENT TURN" : "ANSWERING"}
               </p>
               <p className="font-display text-xl font-black" style={{ color: spotlightTeam.color }}>
-                {spotlightTeam.icon} {spotlightTeam.name} · {spotlightTeam.score}
+                {spotlightTeam.icon} {spotlightTeam.name}
+                {state.scoresHidden ? "" : ` · ${spotlightTeam.score}`}
               </p>
             </div>
           ) : (
@@ -150,6 +154,8 @@ export function GameBoard() {
               selected={state.selectedChoice}
               revealed={state.revealed}
               canAnswer={canAnswer}
+              choicesHidden={state.choicesHidden}
+              removedChoices={state.removedChoices}
               {...(spotlightTeam ? { accent: spotlightTeam.color } : {})}
               onAnswer={(i) => dispatch({ type: "ANSWER", choice: i })}
             />
@@ -212,7 +218,7 @@ export function GameBoard() {
                       : "Paused"
               }
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               <Button
                 size="sm"
                 variant="secondary"
@@ -229,8 +235,26 @@ export function GameBoard() {
               >
                 Reveal
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="rounded-full"
+                onClick={() => dispatch({ type: "TOGGLE_CHOICES" })}
+              >
+                {state.choicesHidden ? "إظهار الاختيارات" : "إخفاء الاختيارات"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="rounded-full"
+                onClick={() => dispatch({ type: "TOGGLE_SCORES" })}
+              >
+                {state.scoresHidden ? "إظهار الدرجات" : "إخفاء الدرجات"}
+              </Button>
             </div>
           </div>
+
+          <LifelinePanel />
 
           <div className="glass rounded-3xl px-5 py-4 text-sm">
             <p className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground">WHAT HAPPENS NEXT</p>
