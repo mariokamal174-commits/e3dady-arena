@@ -42,8 +42,6 @@ export function GameBoard() {
           ? Math.max(5, Math.round(state.settings.speedTimer / 2))
           : state.settings.stealTimer;
 
-  const hideScores = true;
-
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

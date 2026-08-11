@@ -345,15 +345,48 @@ interface Ctx {
 
 const GameContext = createContext<Ctx | null>(null);
 
-function loadPersisted(): GameState | null {
+function loadPersisted(pathname = "/"): GameState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<GameState>;
     if (!parsed.teams || !parsed.questions || !parsed.settings) return null;
-    return {
+
+    const base = {
       ...initialState,
+      settings: { ...initialState.settings, ...parsed.settings },
+      teams: parsed.teams,
+      questions: parsed.questions,
+    };
+
+    if (pathname !== "/play") {
+      return {
+        ...base,
+        phase: "idle",
+        currentIndex: 0,
+        turnTeamId: null,
+        activeTeamId: null,
+        attemptedTeamIds: [],
+        timeLeft: 0,
+        running: false,
+        scored: false,
+        revealed: false,
+        selectedChoice: null,
+        feedback: null,
+        history: [],
+        scoreBumps: {},
+        choicesHidden: false,
+        scoresHidden: true,
+        removedChoices: [],
+        lifelinesUsed: {},
+        lifelineNotice: null,
+      };
+    }
+
+    return {
+      ...base,
+      ...parsed,
       settings: { ...initialState.settings, ...parsed.settings },
       teams: parsed.teams,
       questions: parsed.questions,
@@ -377,6 +410,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
       shouldPush.current = true;
     }
     dispatch(action);
+  }, []);
+
+  const pushState = useCallback(async (nextState: GameState) => {
+    try {
+      await supabase
+        .from("game_rooms")
+        .upsert({
+          id: ROOM_ID,
+          state: nextState as never,
+          sender: clientId.current,
+          updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+      console.error("[game sync] failed to push state", error);
+    }
   }, []);
 
   // Load shared room + subscribe to live updates
@@ -416,14 +464,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!shouldPush.current || !remoteReady.current) return;
     shouldPush.current = false;
-    void supabase
-      .from("game_rooms")
-      .upsert({ id: ROOM_ID, state: state as never, sender: clientId.current, updated_at: new Date().toISOString() });
-  }, [state]);
+    void pushState(state);
+  }, [state, pushState, remoteReady.current]);
 
   useEffect(() => {
     if (hydrated.current) return;
-    const persisted = loadPersisted();
+    const persisted = loadPersisted(typeof window !== "undefined" ? window.location.pathname : "/");
     if (persisted) dispatch({ type: "HYDRATE", state: persisted });
     hydrated.current = true;
   }, []);
@@ -431,14 +477,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated.current) return;
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ settings: state.settings, teams: state.teams, questions: state.questions }),
-      );
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* storage unavailable */
     }
-  }, [state.settings, state.teams, state.questions]);
+  }, [state]);
 
   useEffect(() => {
     setSoundEnabled(state.settings.sound);
@@ -456,7 +499,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Countdown loop
   useEffect(() => {
-    if (!state.running) return;
+    if (typeof window === "undefined" || window.location.pathname !== "/play" || !state.running) return;
     if (state.timeLeft <= 0) {
       dispatch({ type: "EXPIRE" });
       return;
