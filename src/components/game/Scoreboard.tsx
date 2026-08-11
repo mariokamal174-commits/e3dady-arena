@@ -1,7 +1,9 @@
 import { TeamCard, type TeamStatus } from "./TeamCard";
 import type { GameState, Team } from "@/game/types";
+import { useGame } from "@/game/store";
 
 export function Scoreboard({ state }: { state: GameState }) {
+  const { adminUnlocked } = useGame();
   const ranked = [...state.teams].sort((a, b) => b.score - a.score);
   const rankOf = (team: Team) => ranked.findIndex((t) => t.id === team.id) + 1;
 
@@ -30,7 +32,7 @@ export function Scoreboard({ state }: { state: GameState }) {
           team={team}
           status={statusOf(team)}
           rank={rankOf(team)}
-          hideScore={true}
+          hideScore={!adminUnlocked}
           {...(state.scoreBumps[team.id] ? { bump: state.scoreBumps[team.id] } : {})}
         />
       ))}

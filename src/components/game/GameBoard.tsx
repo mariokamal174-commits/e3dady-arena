@@ -26,12 +26,11 @@ const PHASE_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 export function GameBoard() {
-  const { state, dispatch, question, activeTeam, turnTeam } = useGame();
+  const { state, dispatch, question, activeTeam, turnTeam, adminUnlocked } = useGame();
 
   const answering =
     state.phase === "question" || state.phase === "steal-answer" || state.phase === "speed-answer";
   const canAnswer = answering && state.running && !state.scored;
-  const hideScores = true;
 
   const totalTime =
     state.phase === "question"
@@ -56,7 +55,6 @@ export function GameBoard() {
       else if (key === "r") dispatch({ type: "RESTART_QUESTION" });
       else if (key === "a") dispatch({ type: "REVEAL" });
       else if (key === "h") dispatch({ type: "TOGGLE_CHOICES" });
-      else if (key === "s") dispatch({ type: "TOGGLE_SCORES" });
       else if (["1", "2", "3", "4"].includes(key)) {
         const idx = Number(key) - 1;
         if (state.phase === "steal-select" || state.phase === "speed-open") {
@@ -139,7 +137,7 @@ export function GameBoard() {
               </p>
               <p className="font-display text-xl font-black" style={{ color: spotlightTeam.color }}>
                 {spotlightTeam.icon} {spotlightTeam.name}
-                {hideScores ? "" : ` · ${spotlightTeam.score}`}
+                {adminUnlocked ? ` · ${spotlightTeam.score}` : ""}
               </p>
             </div>
           ) : (

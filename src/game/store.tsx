@@ -341,6 +341,8 @@ interface Ctx {
   turnTeam: Team | null;
   question: Question | undefined;
   ranked: Team[];
+  adminUnlocked: boolean;
+  setAdminUnlocked: (v: boolean) => void;
 }
 
 const GameContext = createContext<Ctx | null>(null);
@@ -400,6 +402,46 @@ const ROOM_ID = "main";
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [adminUnlocked, setAdminUnlocked] = (function () {
+    try {
+      if (typeof window === "undefined") return [false, (_: boolean) => {}] as const;
+      const stored = window.localStorage.getItem("quiz-admin-unlocked");
+      const initial = stored === "true";
+      return [
+        initial,
+        (v: boolean) => {
+          try {
+            window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
+          } catch {
+            /* ignore */
+          }
+          // this will be replaced by React state below via setter assignment
+        },
+      ] as unknown as [boolean, (v: boolean) => void];
+    } catch {
+      return [false, (_: boolean) => {}] as const;
+    }
+  })();
+  // useState to get a proper setter (keeps initial value from localStorage)
+  const [__adminUnlocked, __setAdminUnlocked] = ((): [boolean, (v: boolean) => void] => {
+    const [s, setS] = require("react").useState<boolean>(() => {
+      try {
+        const stored = typeof window !== "undefined" ? window.localStorage.getItem("quiz-admin-unlocked") : null;
+        return stored === "true";
+      } catch {
+        return false;
+      }
+    });
+    return [s, (v: boolean) => {
+      try {
+        if (typeof window !== "undefined") window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
+      } catch {}
+      setS(v);
+    }];
+  })();
+  // expose the proper values
+  const adminUnlockedState = __adminUnlocked;
+  const setAdminUnlocked = __setAdminUnlocked;
   const hydrated = useRef(false);
   const clientId = useRef<string>(Math.random().toString(36).slice(2));
   const shouldPush = useRef(false);
@@ -547,8 +589,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       turnTeam: state.teams.find((t) => t.id === state.turnTeamId) ?? null,
       question: state.questions[state.currentIndex],
       ranked: [...state.teams].sort((a, b) => b.score - a.score),
+      adminUnlocked: adminUnlockedState,
+      setAdminUnlocked,
     }),
-    [state, dispatchSync],
+    [state, dispatchSync, adminUnlockedState, setAdminUnlocked],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -64,7 +64,8 @@ function NumberField({
 }
 
 function GameSetup() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, adminUnlocked, setAdminUnlocked } = useGame();
+  const [adminPass, setAdminPass] = require("react").useState("");
   const navigate = useNavigate();
   const { settings, teams, questions } = state;
 
@@ -258,6 +259,35 @@ function GameSetup() {
             <Button asChild variant="secondary" size="lg" className="rounded-2xl font-bold">
               <Link to="/admin">Manage questions &amp; teams</Link>
             </Button>
+            <div className="mt-3 rounded-2xl bg-white/5 p-3">
+              {adminUnlocked ? (
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Admin mode active</span>
+                  <Button size="sm" variant="secondary" onClick={() => setAdminUnlocked(false)}>
+                    Lock
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder="Admin password"
+                    value={adminPass}
+                    onChange={(e) => setAdminPass(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (adminPass === "a3dady") setAdminUnlocked(true);
+                      else alert("Incorrect admin password");
+                    }}
+                  >
+                    Unlock
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </div>
