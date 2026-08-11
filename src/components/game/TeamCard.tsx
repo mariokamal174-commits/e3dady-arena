@@ -21,9 +21,10 @@ interface Props {
   rank?: number;
   onClick?: () => void;
   compact?: boolean;
+  hideScore?: boolean;
 }
 
-export function TeamCard({ team, status, bump, rank, onClick, compact }: Props) {
+export function TeamCard({ team, status, bump, rank, onClick, compact, hideScore }: Props) {
   const highlight = status === "turn" || status === "buzzing";
   const dim = status === "eliminated";
   const clickable = Boolean(onClick);
@@ -75,21 +76,27 @@ export function TeamCard({ team, status, bump, rank, onClick, compact }: Props) 
           <p className="truncate text-sm font-bold tracking-wide uppercase">{team.name}</p>
           <p className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: team.color }}>
             {STATUS_LABEL[status]}
-            {typeof rank === "number" ? ` · #${rank}` : ""}
+            {typeof rank === "number" && !hideScore ? ` · #${rank}` : ""}
           </p>
         </div>
       </div>
 
       <div className="relative mt-3 flex items-end justify-between">
-        <AnimatedScore
-          value={team.score}
-          className="font-display text-3xl leading-none font-extrabold tabular-nums"
-        />
+        {hideScore ? (
+          <span className="font-display text-3xl leading-none font-extrabold tracking-widest text-muted-foreground">
+            ••
+          </span>
+        ) : (
+          <AnimatedScore
+            value={team.score}
+            className="font-display text-3xl leading-none font-extrabold tabular-nums"
+          />
+        )}
         <span className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground">PTS</span>
       </div>
 
       <AnimatePresence>
-        {bump ? (
+        {bump && !hideScore ? (
           <motion.span
             key={`${team.id}-${bump}-${team.score}`}
             initial={{ opacity: 0, y: 8, scale: 0.8 }}

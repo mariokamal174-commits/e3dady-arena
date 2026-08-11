@@ -51,6 +51,15 @@ export type Feedback =
   | { kind: "speed" }
   | null;
 
+export type LifelineKind = "friend" | "time" | "fifty" | "swap";
+
+export const LIFELINES: { kind: LifelineKind; label: string; icon: string }[] = [
+  { kind: "friend", label: "استعانة بصديق", icon: "📞" },
+  { kind: "time", label: "+20 ثانية", icon: "⏱️" },
+  { kind: "fifty", label: "حذف إجابتين", icon: "✂️" },
+  { kind: "swap", label: "تغيير السؤال", icon: "🔄" },
+];
+
 export interface HistoryEntry {
   questionId: string;
   winnerTeamId: string | null;
@@ -74,4 +83,9 @@ export interface GameState {
   feedback: Feedback;
   history: HistoryEntry[];
   scoreBumps: Record<string, number>;
+  choicesHidden: boolean;
+  scoresHidden: boolean;
+  removedChoices: number[];
+  lifelinesUsed: Record<string, LifelineKind[]>;
+  lifelineNotice: string | null;
 }
