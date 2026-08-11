@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useGame } from "@/game/store";
@@ -73,17 +73,25 @@ export function GameBoard() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer]);
 
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current) return;
-    const id = window.setTimeout(() => {
-      started.current = true;
-      if (state.phase === "idle") dispatch({ type: "START_GAME" });
-    }, 900);
-    return () => window.clearTimeout(id);
-  }, [dispatch, state.phase]);
-
   if (state.phase === "over") return <WinnerScreen />;
+
+  if (state.phase === "idle") {
+    return (
+      <div className="grid min-h-screen place-items-center px-6 text-center">
+        <div className="glass rounded-3xl p-10">
+          <h1 className="font-display text-3xl font-black">Ready to start</h1>
+          <p className="mt-2 text-muted-foreground">
+            The game stays idle until you start it from the setup screen.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild className="rounded-full">
+              <Link to="/">Back to setup</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!question) {
     return (
