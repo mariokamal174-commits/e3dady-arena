@@ -31,6 +31,7 @@ export function GameBoard() {
   const answering =
     state.phase === "question" || state.phase === "steal-answer" || state.phase === "speed-answer";
   const canAnswer = answering && state.running && !state.scored;
+  const hideScores = true;
 
   const totalTime =
     state.phase === "question"
@@ -40,6 +41,8 @@ export function GameBoard() {
         : state.phase === "speed-answer"
           ? Math.max(5, Math.round(state.settings.speedTimer / 2))
           : state.settings.stealTimer;
+
+  const hideScores = true;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -138,7 +141,7 @@ export function GameBoard() {
               </p>
               <p className="font-display text-xl font-black" style={{ color: spotlightTeam.color }}>
                 {spotlightTeam.icon} {spotlightTeam.name}
-                {state.scoresHidden ? "" : ` · ${spotlightTeam.score}`}
+                {hideScores ? "" : ` · ${spotlightTeam.score}`}
               </p>
             </div>
           ) : (
@@ -250,14 +253,6 @@ export function GameBoard() {
                 onClick={() => dispatch({ type: "TOGGLE_CHOICES" })}
               >
                 {state.choicesHidden ? "إظهار الاختيارات" : "إخفاء الاختيارات"}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="rounded-full"
-                onClick={() => dispatch({ type: "TOGGLE_SCORES" })}
-              >
-                {state.scoresHidden ? "إظهار الدرجات" : "إخفاء الدرجات"}
               </Button>
             </div>
           </div>

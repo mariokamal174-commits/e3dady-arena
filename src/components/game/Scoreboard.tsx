@@ -30,7 +30,7 @@ export function Scoreboard({ state }: { state: GameState }) {
           team={team}
           status={statusOf(team)}
           rank={rankOf(team)}
-          hideScore={state.scoresHidden}
+          hideScore={true}
           {...(state.scoreBumps[team.id] ? { bump: state.scoreBumps[team.id] } : {})}
         />
       ))}

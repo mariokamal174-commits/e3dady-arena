@@ -68,9 +68,6 @@ export function GameControls() {
             <Button variant="secondary" onClick={() => dispatch({ type: "TOGGLE_CHOICES" })}>
               {state.choicesHidden ? "إظهار الاختيارات" : "إخفاء الاختيارات"}
             </Button>
-            <Button variant="secondary" onClick={() => dispatch({ type: "TOGGLE_SCORES" })}>
-              {state.scoresHidden ? "إظهار الدرجات" : "إخفاء الدرجات"}
-            </Button>
           </div>
 
           <div className="mt-2 rounded-2xl border border-border p-3">
@@ -131,7 +128,7 @@ export function GameControls() {
             <p>Space — pause / resume</p>
             <p>N — next question · P — previous</p>
             <p>R — restart question · A — reveal answer</p>
-            <p>H — hide/show choices · S — hide/show scores</p>
+            <p>H — hide/show choices</p>
             <p>1–4 — pick team (steal / speed) or pick answer A–D while answering</p>
           </div>
         </div>
