@@ -9,7 +9,7 @@ import {
 } from "react";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
 import { playSound, setSoundEnabled, unlockAudio } from "./audio";
-import type { GameSettings, GameState, Question, Team } from "./types";
+import type { GameSettings, GameState, LifelineKind, Question, Team } from "./types";
 
 const STORAGE_KEY = "quiz-arena-state-v1";
 
@@ -30,6 +30,11 @@ export const initialState: GameState = {
   feedback: null,
   history: [],
   scoreBumps: {},
+  choicesHidden: false,
+  scoresHidden: true,
+  removedChoices: [],
+  lifelinesUsed: {},
+  lifelineNotice: null,
 };
 
 export type Action =
@@ -54,7 +59,11 @@ export type Action =
   | { type: "RESET_SCORES" }
   | { type: "END_GAME" }
   | { type: "BACK_TO_SETUP" }
-  | { type: "CLEAR_FEEDBACK" };
+  | { type: "CLEAR_FEEDBACK" }
+  | { type: "TOGGLE_CHOICES" }
+  | { type: "TOGGLE_SCORES" }
+  | { type: "LIFELINE"; kind: LifelineKind; teamId: string }
+  | { type: "CLEAR_LIFELINE_NOTICE" };
 
 function currentQuestion(state: GameState): Question | undefined {
   return state.questions[state.currentIndex];
@@ -79,6 +88,9 @@ function loadQuestion(state: GameState, index: number): GameState {
     selectedChoice: null,
     feedback: isSpeed ? { kind: "speed" } : null,
     scoreBumps: {},
+    choicesHidden: false,
+    removedChoices: [],
+    lifelineNotice: null,
   };
 }
 
@@ -254,6 +266,64 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, phase: "idle", running: false, feedback: null, scoreBumps: {} };
     case "CLEAR_FEEDBACK":
       return { ...state, feedback: null };
+    case "TOGGLE_CHOICES":
+      return { ...state, choicesHidden: !state.choicesHidden };
+    case "TOGGLE_SCORES":
+      return { ...state, scoresHidden: !state.scoresHidden };
+    case "CLEAR_LIFELINE_NOTICE":
+      return { ...state, lifelineNotice: null };
+    case "LIFELINE": {
+      const used = state.lifelinesUsed[action.teamId] ?? [];
+      if (used.includes(action.kind)) return state;
+      const team = state.teams.find((t) => t.id === action.teamId);
+      const question = currentQuestion(state);
+      const base: GameState = {
+        ...state,
+        lifelinesUsed: { ...state.lifelinesUsed, [action.teamId]: [...used, action.kind] },
+      };
+      if (action.kind === "time") {
+        return {
+          ...base,
+          timeLeft: state.timeLeft + 20,
+          running: true,
+          lifelineNotice: `⏱️ +20 ثانية لفريق ${team?.name ?? ""}`,
+        };
+      }
+      if (action.kind === "friend") {
+        return {
+          ...base,
+          running: false,
+          lifelineNotice: `📞 استعانة بصديق — ${team?.name ?? ""} · الوقت متوقف`,
+        };
+      }
+      if (action.kind === "fifty") {
+        if (!question) return state;
+        const wrong = question.choices
+          .map((_, i) => i)
+          .filter((i) => i !== question.correctIndex && !state.removedChoices.includes(i))
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 2);
+        return {
+          ...base,
+          removedChoices: [...state.removedChoices, ...wrong],
+          lifelineNotice: `✂️ حذف إجابتين لفريق ${team?.name ?? ""}`,
+        };
+      }
+      // swap: replace the current question with a later unused one
+      const swapWith = state.questions.findIndex((q, i) => i > state.currentIndex && q.type === (question?.type ?? q.type));
+      const target = swapWith >= 0 ? swapWith : state.currentIndex + 1;
+      if (!state.questions[target]) return { ...base, lifelineNotice: "🔄 لا يوجد سؤال بديل" };
+      const questions = [...state.questions];
+      const a = questions[state.currentIndex]!;
+      const b = questions[target]!;
+      questions[state.currentIndex] = b;
+      questions[target] = a;
+      return {
+        ...loadQuestion({ ...base, questions }, state.currentIndex),
+        lifelinesUsed: base.lifelinesUsed,
+        lifelineNotice: `🔄 تم تغيير السؤال لفريق ${team?.name ?? ""}`,
+      };
+    }
     default:
       return state;
   }
