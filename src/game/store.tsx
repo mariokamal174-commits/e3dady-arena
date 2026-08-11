@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -7,6 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
 import { playSound, setSoundEnabled, unlockAudio } from "./audio";
 import type { GameSettings, GameState, LifelineKind, Question, Team } from "./types";
@@ -39,6 +41,7 @@ export const initialState: GameState = {
 
 export type Action =
   | { type: "HYDRATE"; state: GameState }
+  | { type: "REMOTE"; state: GameState }
   | { type: "SET_SETTINGS"; settings: Partial<GameSettings> }
   | { type: "SET_TEAMS"; teams: Team[] }
   | { type: "SET_QUESTIONS"; questions: Question[] }
@@ -141,6 +144,8 @@ export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "HYDRATE":
       return action.state;
+    case "REMOTE":
+      return { ...state, ...action.state };
     case "SET_SETTINGS":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     case "SET_TEAMS":
@@ -358,9 +363,63 @@ function loadPersisted(): GameState | null {
   }
 }
 
+const ROOM_ID = "main";
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const hydrated = useRef(false);
+  const clientId = useRef<string>(Math.random().toString(36).slice(2));
+  const shouldPush = useRef(false);
+  const remoteReady = useRef(false);
+
+  const dispatchSync = useCallback((action: Action) => {
+    if (action.type !== "TICK" && action.type !== "HYDRATE" && action.type !== "REMOTE") {
+      shouldPush.current = true;
+    }
+    dispatch(action);
+  }, []);
+
+  // Load shared room + subscribe to live updates
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("game_rooms").select("state").eq("id", ROOM_ID).maybeSingle();
+      const remote = data?.state as Partial<GameState> | undefined;
+      if (!cancelled && remote && remote.teams && remote.questions) {
+        dispatch({ type: "REMOTE", state: remote as GameState });
+      }
+      remoteReady.current = true;
+    })();
+
+    const channel = supabase
+      .channel("game-room")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "game_rooms", filter: `id=eq.${ROOM_ID}` },
+        (payload) => {
+          const row = payload.new as { sender?: string; state?: Partial<GameState> } | null;
+          if (!row || row.sender === clientId.current) return;
+          if (row.state && row.state.teams && row.state.questions) {
+            dispatch({ type: "REMOTE", state: row.state as GameState });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Push local changes to everyone else
+  useEffect(() => {
+    if (!shouldPush.current || !remoteReady.current) return;
+    shouldPush.current = false;
+    void supabase
+      .from("game_rooms")
+      .upsert({ id: ROOM_ID, state: state as never, sender: clientId.current, updated_at: new Date().toISOString() });
+  }, [state]);
 
   useEffect(() => {
     if (hydrated.current) return;
@@ -440,13 +499,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       state,
-      dispatch,
+      dispatch: dispatchSync,
       activeTeam: state.teams.find((t) => t.id === state.activeTeamId) ?? null,
       turnTeam: state.teams.find((t) => t.id === state.turnTeamId) ?? null,
       question: state.questions[state.currentIndex],
       ranked: [...state.teams].sort((a, b) => b.score - a.score),
     }),
-    [state],
+    [state, dispatchSync],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
