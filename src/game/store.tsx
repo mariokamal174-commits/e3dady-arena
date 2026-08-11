@@ -414,11 +414,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Push local changes to everyone else
   useEffect(() => {
+    console.log("[sync] effect", shouldPush.current, remoteReady.current);
     if (!shouldPush.current || !remoteReady.current) return;
     shouldPush.current = false;
-    void supabase
+    supabase
       .from("game_rooms")
-      .upsert({ id: ROOM_ID, state: state as never, sender: clientId.current, updated_at: new Date().toISOString() });
+      .upsert({ id: ROOM_ID, state: state as never, sender: clientId.current, updated_at: new Date().toISOString() })
+      .then((r) => console.log("[sync] push", JSON.stringify(r.error)));
   }, [state]);
 
   useEffect(() => {
