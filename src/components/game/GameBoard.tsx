@@ -78,10 +78,10 @@ export function GameBoard() {
     if (started.current) return;
     const id = window.setTimeout(() => {
       started.current = true;
-      dispatch({ type: "START_GAME" });
-    }, 50);
+      if (state.phase === "idle") dispatch({ type: "START_GAME" });
+    }, 900);
     return () => window.clearTimeout(id);
-  }, [dispatch]);
+  }, [dispatch, state.phase]);
 
   if (state.phase === "over") return <WinnerScreen />;
 
