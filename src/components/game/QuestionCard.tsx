@@ -9,6 +9,8 @@ interface Props {
   selected: number | null;
   revealed: boolean;
   canAnswer: boolean;
+  choicesHidden?: boolean;
+  removedChoices?: number[];
   accent?: string;
   onAnswer: (index: number) => void;
 }
@@ -26,6 +28,8 @@ export function QuestionCard({
   selected,
   revealed,
   canAnswer,
+  choicesHidden,
+  removedChoices = [],
   accent,
   onAnswer,
 }: Props) {
@@ -67,8 +71,23 @@ export function QuestionCard({
         {question.text}
       </h2>
 
+      {choicesHidden ? (
+        <div className="relative mt-8 grid place-items-center rounded-2xl border border-dashed border-white/20 bg-white/5 py-14">
+          <p className="font-display text-2xl font-black tracking-[0.2em] text-muted-foreground">
+            الاختيارات مخفية
+          </p>
+        </div>
+      ) : (
       <div className="relative mt-8 grid gap-4 md:grid-cols-2">
         {question.choices.map((choice, i) => {
+          if (removedChoices.includes(i)) {
+            return (
+              <div
+                key={`${question.id}-removed-${i}`}
+                className="rounded-2xl border border-dashed border-white/15 bg-white/5 opacity-40"
+              />
+            );
+          }
           const isCorrect = i === question.correctIndex;
           const state = revealed
             ? isCorrect
@@ -92,6 +111,7 @@ export function QuestionCard({
           );
         })}
       </div>
+      )}
 
       {revealed && question.explanation ? (
         <motion.p
