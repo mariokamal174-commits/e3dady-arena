@@ -12,7 +12,6 @@ const ORDER = [1, 0, 2];
 
 export function WinnerScreen() {
   const { ranked, dispatch, state, adminUnlocked } = useGame();
-  const winner = ranked[0];
 
   useEffect(() => {
     if (state.settings.animations) winnerConfetti(ranked.slice(0, 3).map((t) => t.color));
@@ -29,17 +28,14 @@ export function WinnerScreen() {
         🏆 <span className="text-gradient">GAME OVER</span>
       </motion.h1>
 
-      {winner ? (
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="font-display text-3xl font-black md:text-5xl"
-          style={{ color: winner.color }}
-        >
-          {winner.icon} {winner.name} WINS!
-        </motion.p>
-      ) : null}
+      <motion.p
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="font-display text-3xl font-black md:text-5xl"
+      >
+        TOP TEAMS
+      </motion.p>
 
       <div className="flex w-full items-end justify-center gap-4 md:gap-8">
         {ORDER.map((rankIndex) => {
