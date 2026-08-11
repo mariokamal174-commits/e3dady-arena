@@ -11,7 +11,7 @@ const PODIUM_HEIGHT = [220, 160, 120];
 const ORDER = [1, 0, 2];
 
 export function WinnerScreen() {
-  const { ranked, dispatch, state } = useGame();
+  const { ranked, dispatch, state, adminUnlocked } = useGame();
   const winner = ranked[0];
 
   useEffect(() => {
@@ -62,10 +62,16 @@ export function WinnerScreen() {
               <span className="relative mt-2 text-center text-sm font-bold tracking-wide uppercase">
                 {team.icon} {team.name}
               </span>
-              <AnimatedScore
-                value={team.score}
-                className="relative mt-1 font-display text-3xl font-black tabular-nums"
-              />
+              {adminUnlocked ? (
+                <AnimatedScore
+                  value={team.score}
+                  className="relative mt-1 font-display text-3xl font-black tabular-nums"
+                />
+              ) : (
+                <span className="relative mt-1 font-display text-3xl font-black tabular-nums text-muted-foreground">
+                  —
+                </span>
+              )}
             </motion.div>
           );
         })}
@@ -79,8 +85,11 @@ export function WinnerScreen() {
               <span className="w-6 font-black tabular-nums">{i + 1}</span>
               <span className="text-xl">{team.icon}</span>
               <span className="flex-1 font-semibold">{team.name}</span>
-              <span className="font-display text-xl font-black tabular-nums" style={{ color: team.color }}>
-                {team.score}
+              <span
+                className="font-display text-xl font-black tabular-nums"
+                style={{ color: team.color }}
+              >
+                {adminUnlocked ? team.score : "—"}
               </span>
             </div>
           ))}
