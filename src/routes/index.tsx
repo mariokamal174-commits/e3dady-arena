@@ -159,21 +159,29 @@ function GameSetup() {
                     />
                   ))}
                 </div>
-                <Input
-                  type="number"
-                  value={team.score}
-                  onChange={(e) => updateTeam(team.id, { score: Number(e.target.value) || 0 })}
-                  className="h-11 w-24 rounded-xl bg-white/5 text-center font-bold"
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() =>
-                    dispatch({ type: "SET_TEAMS", teams: teams.filter((t) => t.id !== team.id) })
-                  }
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
+                {adminUnlocked ? (
+                  <>
+                    <Input
+                      type="number"
+                      value={team.score}
+                      onChange={(e) => updateTeam(team.id, { score: Number(e.target.value) || 0 })}
+                      className="h-11 w-24 rounded-xl bg-white/5 text-center font-bold"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() =>
+                        dispatch({ type: "SET_TEAMS", teams: teams.filter((t) => t.id !== team.id) })
+                      }
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </>
+                ) : (
+                  <span className="h-11 w-24 flex items-center justify-center rounded-xl bg-white/5 text-center font-bold text-muted-foreground">
+                    ••
+                  </span>
+                )}
               </div>
             ))}
           </div>

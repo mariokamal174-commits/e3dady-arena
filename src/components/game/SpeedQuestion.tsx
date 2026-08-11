@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import type { Team } from "@/game/types";
 import { TeamCard } from "./TeamCard";
+import { useGame } from "@/game/store";
 
 export function SpeedQuestion({
   teams,
@@ -11,6 +12,7 @@ export function SpeedQuestion({
   attempted: string[];
   onBuzz: (teamId: string) => void;
 }) {
+  const { adminUnlocked } = useGame();
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -43,6 +45,7 @@ export function SpeedQuestion({
                 status={out ? "eliminated" : "can-steal"}
                 {...(out ? {} : { onClick: () => onBuzz(team.id) })}
                 compact
+                hideScore={!adminUnlocked}
               />
             </div>
           );

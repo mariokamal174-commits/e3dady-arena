@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import type { Team } from "@/game/types";
 import { TeamCard } from "./TeamCard";
+import { useGame } from "@/game/store";
 
 export function StealMode({
   teams,
@@ -11,6 +12,7 @@ export function StealMode({
   attempted: string[];
   onClaim: (teamId: string) => void;
 }) {
+  const { adminUnlocked } = useGame();
   const eligible = teams.filter((t) => !attempted.includes(t.id));
   return (
     <motion.div
@@ -37,6 +39,7 @@ export function StealMode({
               status={out ? "eliminated" : "can-steal"}
               {...(out ? {} : { onClick: () => onClaim(team.id) })}
               compact
+              hideScore={!adminUnlocked}
             />
           );
         })}
