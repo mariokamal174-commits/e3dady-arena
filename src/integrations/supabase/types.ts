@@ -14,7 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_rooms: {
+        Row: {
+          id: string
+          sender: string | null
+          state: Json
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          sender?: string | null
+          state?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sender?: string | null
+          state?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
