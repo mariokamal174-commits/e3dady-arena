@@ -31,6 +31,7 @@ export function GameBoard() {
   const answering =
     state.phase === "question" || state.phase === "steal-answer" || state.phase === "speed-answer";
   const canAnswer = answering && state.running && !state.scored;
+  const notStarted = !state.questionStarted && !state.revealed && !state.scored;
 
   const totalTime =
     state.phase === "question"
@@ -154,6 +155,30 @@ export function GameBoard() {
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <AnimatePresence mode="wait">
+            {notStarted ? (
+              <motion.div
+                key="start-gate"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="glass stage-glow grid place-items-center rounded-3xl px-6 py-20 text-center"
+              >
+                <p className="text-[11px] font-black tracking-[0.3em] text-muted-foreground">
+                  QUESTION {state.currentIndex + 1} / {state.questions.length}
+                </p>
+                <h2 className="mt-4 font-display text-4xl font-black md:text-5xl">جاهزين؟</h2>
+                <p className="mt-3 text-muted-foreground">
+                  السؤال والتايمر مش هيبدأوا غير لما تدوس ابدأ
+                </p>
+                <Button
+                  size="lg"
+                  className="mt-8 h-14 rounded-2xl px-10 font-display text-xl font-black"
+                  onClick={() => dispatch({ type: "RESUME" })}
+                >
+                  ابدأ السؤال ▶
+                </Button>
+              </motion.div>
+            ) : (
             <QuestionCard
               key={question.id + state.phase}
               question={question}
@@ -167,6 +192,7 @@ export function GameBoard() {
               {...(spotlightTeam ? { accent: spotlightTeam.color } : {})}
               onAnswer={(i) => dispatch({ type: "ANSWER", choice: i })}
             />
+            )}
           </AnimatePresence>
 
           <AnimatePresence>
@@ -266,9 +292,11 @@ export function GameBoard() {
                   ? "Waiting for a steal"
                   : state.phase === "speed-open"
                     ? "Buzz in!"
-                    : state.running
-                      ? "Seconds left"
-                      : "Paused"
+                    : notStarted
+                      ? "اضغط ابدأ"
+                      : state.running
+                        ? "Seconds left"
+                        : "Paused"
               }
             />
             <div className="flex flex-wrap justify-center gap-2">
@@ -278,7 +306,7 @@ export function GameBoard() {
                 className="rounded-full"
                 onClick={() => dispatch({ type: state.running ? "PAUSE" : "RESUME" })}
               >
-                {state.running ? "Pause" : "Resume"}
+                {state.running ? "Pause" : notStarted ? "ابدأ" : "Resume"}
               </Button>
               <Button
                 size="sm"
