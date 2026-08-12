@@ -440,26 +440,19 @@ const ROOM_ID = "main";
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   // admin unlocked flag persisted in localStorage
-  const [adminUnlocked, setAdminUnlocked] = ((): [boolean, (v: boolean) => void] => {
-    const { useState } = require("react");
-    const [s, setS] = useState<boolean>(() => {
-      try {
-        const stored = typeof window !== "undefined" ? window.localStorage.getItem("quiz-admin-unlocked") : null;
-        return stored === "true";
-      } catch {
-        return false;
-      }
-    });
-    return [
-      s,
-      (v: boolean) => {
-        try {
-          if (typeof window !== "undefined") window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
-        } catch {}
-        setS(v);
-      },
-    ];
-  })();
+  const [adminUnlockedState, setAdminUnlockedState] = useState(false);
+  useEffect(() => {
+    try {
+      setAdminUnlockedState(window.localStorage.getItem("quiz-admin-unlocked") === "true");
+    } catch {}
+  }, []);
+  const adminUnlocked = adminUnlockedState;
+  const setAdminUnlocked = useCallback((v: boolean) => {
+    try {
+      window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
+    } catch {}
+    setAdminUnlockedState(v);
+  }, []);
   const hydrated = useRef(false);
   const clientId = useRef<string>(Math.random().toString(36).slice(2));
   const shouldPush = useRef(false);
