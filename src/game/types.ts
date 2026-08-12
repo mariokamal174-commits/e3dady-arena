@@ -77,6 +77,7 @@ export interface GameState {
   attemptedTeamIds: string[];
   timeLeft: number;
   running: boolean;
+  questionStarted: boolean;
   scored: boolean;
   revealed: boolean;
   selectedChoice: number | null;

@@ -35,7 +35,9 @@ export function Scoreboard({ state }: { state: GameState }) {
           status={statusOf(team)}
           rank={rankOf(team)}
           hideScore={!adminUnlocked}
-          onClick={isOralQuestion ? () => dispatch({ type: "ORAL_SELECT", teamId: team.id }) : undefined}
+          {...(isOralQuestion
+            ? { onClick: () => dispatch({ type: "ORAL_SELECT", teamId: team.id }) }
+            : {})}
           {...(state.scoreBumps[team.id] ? { bump: state.scoreBumps[team.id] } : {})}
         />
       ))}

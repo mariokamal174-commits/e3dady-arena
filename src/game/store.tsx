@@ -6,6 +6,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ export const initialState: GameState = {
   attemptedTeamIds: [],
   timeLeft: 0,
   running: false,
+  questionStarted: false,
   scored: false,
   revealed: false,
   selectedChoice: null,
@@ -87,7 +89,8 @@ function loadQuestion(state: GameState, index: number): GameState {
     activeTeamId: isSpeed ? null : (turnTeam?.id ?? null),
     attemptedTeamIds: [],
     timeLeft: isSpeed ? state.settings.speedTimer : (question.timer ?? state.settings.defaultTimer),
-    running: true,
+    running: false,
+    questionStarted: false,
     scored: false,
     revealed: false,
     selectedChoice: null,
@@ -145,9 +148,9 @@ function afterWrong(state: GameState, teamId: string): GameState {
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "HYDRATE":
-      return action.state;
+      return { ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "REMOTE":
-      return { ...state, ...action.state };
+      return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "SET_SETTINGS":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     case "SET_TEAMS":
@@ -288,7 +291,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, running: false };
     case "RESUME":
       return state.timeLeft > 0 && state.phase !== "reveal" && state.phase !== "over"
-        ? { ...state, running: true }
+        ? { ...state, running: true, questionStarted: true }
         : state;
     case "ADJUST":
       return {
@@ -438,26 +441,19 @@ const ROOM_ID = "main";
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   // admin unlocked flag persisted in localStorage
-  const [adminUnlocked, setAdminUnlocked] = ((): [boolean, (v: boolean) => void] => {
-    const { useState } = require("react");
-    const [s, setS] = useState<boolean>(() => {
-      try {
-        const stored = typeof window !== "undefined" ? window.localStorage.getItem("quiz-admin-unlocked") : null;
-        return stored === "true";
-      } catch {
-        return false;
-      }
-    });
-    return [
-      s,
-      (v: boolean) => {
-        try {
-          if (typeof window !== "undefined") window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
-        } catch {}
-        setS(v);
-      },
-    ];
-  })();
+  const [adminUnlockedState, setAdminUnlockedState] = useState(false);
+  useEffect(() => {
+    try {
+      setAdminUnlockedState(window.localStorage.getItem("quiz-admin-unlocked") === "true");
+    } catch {}
+  }, []);
+  const adminUnlocked = adminUnlockedState;
+  const setAdminUnlocked = useCallback((v: boolean) => {
+    try {
+      window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
+    } catch {}
+    setAdminUnlockedState(v);
+  }, []);
   const hydrated = useRef(false);
   const clientId = useRef<string>(Math.random().toString(36).slice(2));
   const shouldPush = useRef(false);
