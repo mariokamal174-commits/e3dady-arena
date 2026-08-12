@@ -26,7 +26,7 @@ import {
 import { useGame } from "@/game/store";
 
 export function GameControls() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, adminUnlocked } = useGame();
 
   return (
     <Sheet>
@@ -77,7 +77,9 @@ export function GameControls() {
                 <div key={team.id} className="flex items-center gap-2">
                   <span className="w-8 text-lg">{team.icon}</span>
                   <span className="flex-1 truncate text-sm font-semibold">{team.name}</span>
-                  <span className="w-10 text-right font-bold tabular-nums">{team.score}</span>
+                  <span className="w-10 text-right font-bold tabular-nums">
+                    {adminUnlocked ? team.score : "••"}
+                  </span>
                   <Button
                     size="icon"
                     variant="secondary"
