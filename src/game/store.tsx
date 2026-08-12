@@ -26,6 +26,7 @@ export const initialState: GameState = {
   attemptedTeamIds: [],
   timeLeft: 0,
   running: false,
+  questionStarted: false,
   scored: false,
   revealed: false,
   selectedChoice: null,
@@ -87,7 +88,8 @@ function loadQuestion(state: GameState, index: number): GameState {
     activeTeamId: isSpeed ? null : (turnTeam?.id ?? null),
     attemptedTeamIds: [],
     timeLeft: isSpeed ? state.settings.speedTimer : (question.timer ?? state.settings.defaultTimer),
-    running: true,
+    running: false,
+    questionStarted: false,
     scored: false,
     revealed: false,
     selectedChoice: null,
@@ -288,7 +290,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, running: false };
     case "RESUME":
       return state.timeLeft > 0 && state.phase !== "reveal" && state.phase !== "over"
-        ? { ...state, running: true }
+        ? { ...state, running: true, questionStarted: true }
         : state;
     case "ADJUST":
       return {
