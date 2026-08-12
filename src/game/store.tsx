@@ -148,9 +148,9 @@ function afterWrong(state: GameState, teamId: string): GameState {
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "HYDRATE":
-      return action.state;
+      return { ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "REMOTE":
-      return { ...state, ...action.state };
+      return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "SET_SETTINGS":
       return { ...state, settings: { ...state.settings, ...action.settings } };
     case "SET_TEAMS":
