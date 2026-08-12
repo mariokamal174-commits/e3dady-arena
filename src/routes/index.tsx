@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Plus, Trash2 } from "lucide-react";
@@ -65,7 +66,7 @@ function NumberField({
 
 function GameSetup() {
   const { state, dispatch, adminUnlocked, setAdminUnlocked } = useGame();
-  const [adminPass, setAdminPass] = require("react").useState("");
+  const [adminPass, setAdminPass] = useState("");
   const navigate = useNavigate();
   const { settings, teams, questions } = state;
 
