@@ -26,7 +26,7 @@ import {
 import { useGame } from "@/game/store";
 
 export function GameControls() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, adminUnlocked } = useGame();
 
   return (
     <Sheet>
