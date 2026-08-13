@@ -31,7 +31,12 @@ export interface GameSettings {
   speedPoints: number;
   sound: boolean;
   animations: boolean;
+  volume: number;
+  /** What happens on a wrong answer: nothing, lose half the points, or pass the turn immediately. */
+  penalty: PenaltyMode;
 }
+
+export type PenaltyMode = "none" | "half" | "pass";
 
 export type Phase =
   | "idle"

@@ -23,6 +23,8 @@ export const demoSettings: GameSettings = {
   speedPoints: 30,
   sound: true,
   animations: true,
+  volume: 0.8,
+  penalty: "none",
 };
 
 export const demoTeams: Team[] = [
