@@ -11,7 +11,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
-import { playSound, setSoundEnabled, unlockAudio } from "./audio";
+import { playSound, setSoundEnabled, setVolume, unlockAudio } from "./audio";
 import type { GameSettings, GameState, LifelineKind, Question, Team } from "./types";
 
 const STORAGE_KEY = "quiz-arena-state-v1";
@@ -128,7 +128,24 @@ function afterWrong(state: GameState, teamId: string): GameState {
     ? state.attemptedTeamIds
     : [...state.attemptedTeamIds, teamId];
   const remaining = state.teams.filter((t) => !attempted.includes(t.id));
-  const base = { ...state, attemptedTeamIds: attempted, selectedChoice: null, activeTeamId: null };
+
+  // Wrong-answer penalty
+  const penalty = state.settings.penalty ?? "none";
+  const loss = penalty === "half" ? Math.round((question?.points ?? 0) / 2) : 0;
+  const penalized: GameState = loss
+    ? {
+        ...state,
+        teams: state.teams.map((t) => (t.id === teamId ? { ...t, score: t.score - loss } : t)),
+        scoreBumps: { ...state.scoreBumps, [teamId]: -loss },
+      }
+    : state;
+
+  const base = { ...penalized, attemptedTeamIds: attempted, selectedChoice: null, activeTeamId: null };
+
+  if (penalty === "pass") {
+    // Turn passes immediately — no steal, no buzz back in.
+    return { ...base, phase: "reveal", revealed: true, running: false, feedback: { kind: "wrong", teamId } };
+  }
 
   if (remaining.length === 0) {
     return { ...base, phase: "reveal", revealed: true, running: false, feedback: { kind: "wrong", teamId } };
@@ -400,6 +417,8 @@ function loadPersisted(pathname = "/"): GameState | null {
       questions: parsed.questions,
     };
 
+    if (pathname === "/watch") return null;
+
     if (pathname !== "/play") {
       return {
         ...base,
@@ -540,6 +559,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSoundEnabled(state.settings.sound);
   }, [state.settings.sound]);
+
+  useEffect(() => {
+    setVolume(state.settings.volume ?? 1);
+  }, [state.settings.volume]);
 
   useEffect(() => {
     const unlock = () => unlockAudio();
