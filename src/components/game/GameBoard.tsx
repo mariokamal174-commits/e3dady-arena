@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useGame } from "@/game/store";
 import { playSound } from "@/game/audio";
+import { FullscreenButton } from "./FullscreenButton";
 import { CountdownTimer } from "./CountdownTimer";
 import { FeedbackOverlay } from "./FeedbackOverlay";
 import { GameControls } from "./GameControls";
@@ -25,12 +26,12 @@ const PHASE_BADGE: Record<string, { label: string; className: string }> = {
   idle: { label: "READY", className: "bg-white/10 text-muted-foreground" },
 };
 
-export function GameBoard() {
+export function GameBoard({ spectator = false }: { spectator?: boolean }) {
   const { state, dispatch, question, activeTeam, turnTeam, adminUnlocked } = useGame();
 
   const answering =
     state.phase === "question" || state.phase === "steal-answer" || state.phase === "speed-answer";
-  const canAnswer = answering && state.running && !state.scored;
+  const canAnswer = answering && state.running && !state.scored && !spectator;
   const notStarted = !state.questionStarted && !state.revealed && !state.scored;
 
   const totalTime =
@@ -44,6 +45,7 @@ export function GameBoard() {
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (spectator) return;
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
@@ -71,7 +73,7 @@ export function GameBoard() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer]);
+  }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer, spectator]);
 
   if (state.phase === "over") return <WinnerScreen />;
 
@@ -148,7 +150,8 @@ export function GameBoard() {
               <p className="font-display text-xl font-black text-warning">ALL TEAMS</p>
             </div>
           )}
-          <GameControls />
+          <FullscreenButton />
+          {spectator ? null : <GameControls />}
         </div>
       </header>
 
@@ -170,13 +173,19 @@ export function GameBoard() {
                 <p className="mt-3 text-muted-foreground">
                   السؤال والتايمر مش هيبدأوا غير لما تدوس ابدأ
                 </p>
-                <Button
-                  size="lg"
-                  className="mt-8 h-14 rounded-2xl px-10 font-display text-xl font-black"
-                  onClick={() => dispatch({ type: "RESUME" })}
-                >
-                  ابدأ السؤال ▶
-                </Button>
+                {spectator ? (
+                  <p className="mt-8 rounded-2xl bg-white/10 px-8 py-4 font-display text-xl font-black">
+                    في انتظار المقدم…
+                  </p>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="mt-8 h-14 rounded-2xl px-10 font-display text-xl font-black"
+                    onClick={() => dispatch({ type: "RESUME" })}
+                  >
+                    ابدأ السؤال ▶
+                  </Button>
+                )}
               </motion.div>
             ) : (
             <QuestionCard
@@ -196,7 +205,7 @@ export function GameBoard() {
           </AnimatePresence>
 
           <AnimatePresence>
-            {(state.phase === "steal-select" || state.phase === "steal-answer") && (
+            {(state.phase === "steal-select" || state.phase === "steal-answer") && !spectator && (
               <StealMode
                 key="steal"
                 teams={state.teams}
@@ -207,7 +216,7 @@ export function GameBoard() {
                 }}
               />
             )}
-            {(state.phase === "speed-open" || state.phase === "speed-answer") && (
+            {(state.phase === "speed-open" || state.phase === "speed-answer") && !spectator && (
               <SpeedQuestion
                 key="speed"
                 teams={state.teams}
@@ -220,7 +229,7 @@ export function GameBoard() {
             )}
           </AnimatePresence>
 
-          {question.type === "oral" && state.phase === "question" && state.activeTeamId ? (
+          {question.type === "oral" && state.phase === "question" && state.activeTeamId && !spectator ? (
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
@@ -274,9 +283,11 @@ export function GameBoard() {
               <p className="font-display text-2xl font-black text-success">
                 ✅ Correct answer: {question.choices[question.correctIndex]}
               </p>
-              <Button size="lg" className="rounded-full px-8 font-bold" onClick={() => dispatch({ type: "NEXT" })}>
-                Next question →
-              </Button>
+              {spectator ? null : (
+                <Button size="lg" className="rounded-full px-8 font-bold" onClick={() => dispatch({ type: "NEXT" })}>
+                  Next question →
+                </Button>
+              )}
             </motion.div>
           ) : null}
         </div>
@@ -299,7 +310,7 @@ export function GameBoard() {
                         : "Paused"
               }
             />
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className={`flex-wrap justify-center gap-2 ${spectator ? "hidden" : "flex"}`}>
               <Button
                 size="sm"
                 variant="secondary"
@@ -327,7 +338,7 @@ export function GameBoard() {
             </div>
           </div>
 
-          <LifelinePanel />
+          {spectator ? null : <LifelinePanel />}
 
           <div className="glass rounded-3xl px-5 py-4 text-sm">
             <p className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground">WHAT HAPPENS NEXT</p>
