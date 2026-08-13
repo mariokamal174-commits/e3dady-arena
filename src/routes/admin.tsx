@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GameProvider, useGame } from "@/game/store";
 import { TEAM_ICONS, TEAM_PALETTE } from "@/game/demo";
 import { QuestionCard } from "@/components/game/QuestionCard";
-import type { Question, QuestionType, Team } from "@/game/types";
+import type { PenaltyMode, Question, QuestionType, Team } from "@/game/types";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -115,6 +117,9 @@ function Admin() {
           </TabsTrigger>
           <TabsTrigger value="teams" className="rounded-full px-5">
             Teams ({state.teams.length})
+          </TabsTrigger>
+          <TabsTrigger value="show" className="rounded-full px-5">
+            Show
           </TabsTrigger>
         </TabsList>
 
@@ -264,6 +269,67 @@ function Admin() {
               </Button>
             </div>
           ))}
+        </TabsContent>
+        <TabsContent value="show" className="mt-5 grid gap-4 md:grid-cols-2">
+          <SpectatorPanel />
+          <div className="glass space-y-6 rounded-2xl p-5">
+            <div>
+              <p className="text-[10px] font-black tracking-[0.22em] text-muted-foreground">SOUND VOLUME</p>
+              <div className="mt-4 flex items-center gap-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() =>
+                    dispatch({ type: "SET_SETTINGS", settings: { sound: !state.settings.sound } })
+                  }
+                >
+                  {state.settings.sound ? "🔊 On" : "🔇 Muted"}
+                </Button>
+                <Slider
+                  className="flex-1"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={[Math.round((state.settings.volume ?? 0.8) * 100)]}
+                  onValueChange={([v]) =>
+                    dispatch({ type: "SET_SETTINGS", settings: { volume: (v ?? 0) / 100 } })
+                  }
+                />
+                <span className="w-12 text-right font-bold tabular-nums">
+                  {Math.round((state.settings.volume ?? 0.8) * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-black tracking-[0.22em] text-muted-foreground">
+                عقوبة الإجابة الغلط
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(
+                  [
+                    { value: "none", label: "بدون عقوبة" },
+                    { value: "half", label: "خصم نصف النقاط" },
+                    { value: "pass", label: "تمرير الدور فورًا" },
+                  ] as { value: PenaltyMode; label: string }[]
+                ).map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={(state.settings.penalty ?? "none") === opt.value ? "default" : "secondary"}
+                    className="rounded-full"
+                    onClick={() => dispatch({ type: "SET_SETTINGS", settings: { penalty: opt.value } })}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                خصم نصف النقاط: الفريق يخسر نص نقاط السؤال ويفضل باب السرقة مفتوح. تمرير الدور: السؤال
+                يتقفل فورًا من غير سرقة.
+              </p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -434,5 +500,37 @@ function Admin() {
         </DialogContent>
       </Dialog>
     </main>
+  );
+}
+
+
+function SpectatorPanel() {
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+  const url = origin ? `${origin}/watch` : "";
+
+  return (
+    <div className="glass flex flex-col items-center gap-4 rounded-2xl p-5 text-center">
+      <p className="text-[10px] font-black tracking-[0.22em] text-muted-foreground">شاشة الجمهور</p>
+      <div className="rounded-2xl bg-white p-3">
+        {url ? <QRCodeSVG value={url} size={168} includeMargin={false} /> : <div className="size-[168px]" />}
+      </div>
+      <p className="text-sm text-muted-foreground">امسح الكود عشان تتابع اللعبة بدون تحكم</p>
+      <code className="break-all rounded-full bg-white/10 px-3 py-1 text-xs">{url || "/watch"}</code>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="rounded-full"
+          onClick={() => void navigator.clipboard.writeText(url)}
+        >
+          نسخ اللينك
+        </Button>
+        <Button asChild className="rounded-full">
+          <a href="/watch" target="_blank" rel="noreferrer">
+            فتح المشاهدة
+          </a>
+        </Button>
+      </div>
+    </div>
   );
 }
