@@ -168,8 +168,24 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "REMOTE":
       return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
-    case "SET_SETTINGS":
-      return { ...state, settings: { ...state.settings, ...action.settings } };
+    case "SET_SETTINGS": {
+      const nextSettings = { ...state.settings, ...action.settings };
+      // Keep existing questions in sync when the default point values change,
+      // so questions that still use the old default follow the new one.
+      const oldDefault = state.settings.defaultPoints;
+      const oldSpeed = state.settings.speedPoints;
+      const questions = state.questions.map((q) => {
+        if (q.type === "speed" && oldSpeed !== nextSettings.speedPoints && q.points === oldSpeed) {
+          return { ...q, points: nextSettings.speedPoints };
+        }
+        if (q.type !== "speed" && oldDefault !== nextSettings.defaultPoints && q.points === oldDefault) {
+          return { ...q, points: nextSettings.defaultPoints };
+        }
+        return q;
+      });
+      return { ...state, settings: nextSettings, questions };
+    }
+
     case "SET_TEAMS":
       return { ...state, teams: action.teams };
     case "SET_QUESTIONS":
