@@ -6,7 +6,8 @@ export function Scoreboard({ state }: { state: GameState }) {
   const { adminUnlocked, dispatch, question } = useGame();
   const ranked = [...state.teams].sort((a, b) => b.score - a.score);
   const rankOf = (team: Team) => ranked.findIndex((t) => t.id === team.id) + 1;
-  const isOralQuestion = state.phase === "question" && question?.type === "oral";
+  const isOralQuestion =
+    (state.phase === "question" || state.phase === "steal-select") && question?.type === "oral";
 
   const statusOf = (team: Team): TeamStatus => {
     const attempted = state.attemptedTeamIds.includes(team.id);

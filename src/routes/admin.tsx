@@ -523,7 +523,7 @@ function Admin() {
                       <img
                         src={editing.imageUrl}
                         alt="معاينة صورة السؤال"
-                        className="max-h-40 w-full rounded-xl object-cover"
+                        className="max-h-40 w-auto max-w-full rounded-xl object-contain"
                       />
                     ) : null}
                   </div>

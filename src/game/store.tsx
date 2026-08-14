@@ -168,8 +168,24 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "REMOTE":
       return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
-    case "SET_SETTINGS":
-      return { ...state, settings: { ...state.settings, ...action.settings } };
+    case "SET_SETTINGS": {
+      const nextSettings = { ...state.settings, ...action.settings };
+      // Keep existing questions in sync when the default point values change,
+      // so questions that still use the old default follow the new one.
+      const oldDefault = state.settings.defaultPoints;
+      const oldSpeed = state.settings.speedPoints;
+      const questions = state.questions.map((q) => {
+        if (q.type === "speed" && oldSpeed !== nextSettings.speedPoints && q.points === oldSpeed) {
+          return { ...q, points: nextSettings.speedPoints };
+        }
+        if (q.type !== "speed" && oldDefault !== nextSettings.defaultPoints && q.points === oldDefault) {
+          return { ...q, points: nextSettings.defaultPoints };
+        }
+        return q;
+      });
+      return { ...state, settings: nextSettings, questions };
+    }
+
     case "SET_TEAMS":
       return { ...state, teams: action.teams };
     case "SET_QUESTIONS":
@@ -239,9 +255,12 @@ export function reducer(state: GameState, action: Action): GameState {
       return award(withChoice, teamId, points);
     }
     case "ORAL_SELECT": {
-      if (!currentQuestion(state)?.type || currentQuestion(state)?.type !== "oral") return state;
+      const q = currentQuestion(state);
+      if (!q || q.type !== "oral") return state;
+      if (state.attemptedTeamIds.includes(action.teamId)) return state;
       return {
         ...state,
+        phase: state.phase === "steal-select" ? "steal-answer" : state.phase,
         activeTeamId: action.teamId,
         running: false,
         feedback: null,
@@ -251,17 +270,15 @@ export function reducer(state: GameState, action: Action): GameState {
       const question = currentQuestion(state);
       if (!question || question.type !== "oral") return state;
       if (action.correct) {
-        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, question.points);
+        const points =
+          state.phase === "steal-answer"
+            ? (state.settings.stealPoints ?? question.points)
+            : question.points;
+        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
       }
-      return {
-        ...state,
-        activeTeamId: action.teamId,
-        running: false,
-        phase: "reveal",
-        revealed: true,
-        feedback: { kind: "wrong", teamId: action.teamId },
-      };
+      return afterWrong({ ...state, activeTeamId: action.teamId, running: false }, action.teamId);
     }
+
     case "CLAIM": {
       if (state.attemptedTeamIds.includes(action.teamId)) return state;
       if (state.phase === "steal-select") {
