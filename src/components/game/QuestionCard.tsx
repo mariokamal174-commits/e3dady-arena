@@ -63,10 +63,11 @@ export function QuestionCard({
         <img
           src={question.imageUrl}
           alt=""
-          className="mt-6 max-h-56 w-full rounded-2xl object-cover"
+          className="mx-auto mt-6 max-h-[46vh] w-auto max-w-full rounded-2xl object-contain"
           loading="lazy"
         />
       ) : null}
+
 
       <h2 className="relative mt-6 text-3xl leading-tight font-extrabold text-balance md:text-5xl">
         {question.text}
