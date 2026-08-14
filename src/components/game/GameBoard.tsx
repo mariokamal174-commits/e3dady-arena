@@ -229,7 +229,10 @@ export function GameBoard({ spectator = false }: { spectator?: boolean }) {
             )}
           </AnimatePresence>
 
-          {question.type === "oral" && state.phase === "question" && state.activeTeamId && !spectator ? (
+          {question.type === "oral" &&
+          (state.phase === "question" || state.phase === "steal-answer") &&
+          state.activeTeamId &&
+          !spectator ? (
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
