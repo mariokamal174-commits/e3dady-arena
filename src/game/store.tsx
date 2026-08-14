@@ -239,9 +239,12 @@ export function reducer(state: GameState, action: Action): GameState {
       return award(withChoice, teamId, points);
     }
     case "ORAL_SELECT": {
-      if (!currentQuestion(state)?.type || currentQuestion(state)?.type !== "oral") return state;
+      const q = currentQuestion(state);
+      if (!q || q.type !== "oral") return state;
+      if (state.attemptedTeamIds.includes(action.teamId)) return state;
       return {
         ...state,
+        phase: state.phase === "steal-select" ? "steal-answer" : state.phase,
         activeTeamId: action.teamId,
         running: false,
         feedback: null,
@@ -251,17 +254,15 @@ export function reducer(state: GameState, action: Action): GameState {
       const question = currentQuestion(state);
       if (!question || question.type !== "oral") return state;
       if (action.correct) {
-        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, question.points);
+        const points =
+          state.phase === "steal-answer"
+            ? (state.settings.stealPoints ?? question.points)
+            : question.points;
+        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
       }
-      return {
-        ...state,
-        activeTeamId: action.teamId,
-        running: false,
-        phase: "reveal",
-        revealed: true,
-        feedback: { kind: "wrong", teamId: action.teamId },
-      };
+      return afterWrong({ ...state, activeTeamId: action.teamId, running: false }, action.teamId);
     }
+
     case "CLAIM": {
       if (state.attemptedTeamIds.includes(action.teamId)) return state;
       if (state.phase === "steal-select") {
