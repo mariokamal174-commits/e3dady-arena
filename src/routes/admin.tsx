@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,6 +67,7 @@ function Admin() {
   const { state, dispatch } = useGame();
   const [editing, setEditing] = useState<Question | null>(null);
   const [preview, setPreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const questions = state.questions;
   const setQuestions = (next: Question[]) => dispatch({ type: "SET_QUESTIONS", questions: next });
@@ -447,9 +450,10 @@ function Admin() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Image URL (optional)</Label>
+                    <Label>صورة السؤال (اختياري)</Label>
                     <Input
                       value={editing.imageUrl ?? ""}
+                      placeholder="الصق لينك أو ارفع صورة"
                       onChange={(e) => {
                         const next = { ...editing };
                         if (!e.target.value) delete next.imageUrl;
@@ -458,7 +462,72 @@ function Admin() {
                       }}
                       className="h-11 rounded-xl bg-white/5"
                     />
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="question-image-file"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!file) return;
+                          setUploading(true);
+                          try {
+                            const ext = file.name.split(".").pop() || "jpg";
+                            const path = `${crypto.randomUUID()}.${ext}`;
+                            const { error } = await supabase.storage
+                              .from("question-images")
+                              .upload(path, file, { contentType: file.type, upsert: false });
+                            if (error) throw error;
+                            const { data, error: signErr } = await supabase.storage
+                              .from("question-images")
+                              .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+                            if (signErr || !data) throw signErr ?? new Error("no url");
+                            setEditing((prev) => (prev ? { ...prev, imageUrl: data.signedUrl } : prev));
+                            toast.success("تم رفع الصورة");
+                          } catch (err) {
+                            toast.error("فشل رفع الصورة");
+                            console.error(err);
+                          } finally {
+                            setUploading(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="rounded-full"
+                        disabled={uploading}
+                        onClick={() => document.getElementById("question-image-file")?.click()}
+                      >
+                        <ImagePlus className="size-4" />
+                        {uploading ? "جاري الرفع..." : "ارفع صورة من الجهاز"}
+                      </Button>
+                      {editing.imageUrl ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="rounded-full"
+                          onClick={() => {
+                            const next = { ...editing };
+                            delete next.imageUrl;
+                            setEditing(next);
+                          }}
+                        >
+                          حذف
+                        </Button>
+                      ) : null}
+                    </div>
+                    {editing.imageUrl ? (
+                      <img
+                        src={editing.imageUrl}
+                        alt="معاينة صورة السؤال"
+                        className="max-h-40 w-full rounded-xl object-cover"
+                      />
+                    ) : null}
                   </div>
+
                   <div className="space-y-1.5">
                     <Label>Sound URL (optional)</Label>
                     <Input
