@@ -71,6 +71,62 @@ export function GameControls() {
           </div>
 
           <div className="mt-2 rounded-2xl border border-border p-3">
+            <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">TIMERS (ثواني)</p>
+            <div className="grid gap-2">
+              {(
+                [
+                  { key: "defaultTimer", label: "سؤال عادي" },
+                  { key: "stealTimer", label: "سرقة" },
+                  { key: "speedTimer", label: "سرعة" },
+                ] as const
+              ).map((row) => (
+                <div key={row.key} className="flex items-center gap-2">
+                  <span className="flex-1 text-sm font-semibold">{row.label}</span>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: Math.max(5, state.settings[row.key] - 5) },
+                      })
+                    }
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <span className="w-8 text-center font-bold tabular-nums">{state.settings[row.key]}</span>
+                  <Button
+                    size="icon"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: Math.min(300, state.settings[row.key] + 5) },
+                      })
+                    }
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t border-border pt-2">
+                <span className="flex-1 text-sm font-semibold">الوقت الحالي</span>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={() => dispatch({ type: "SET_TIME", seconds: state.timeLeft - 5 })}
+                >
+                  <Minus className="size-4" />
+                </Button>
+                <span className="w-8 text-center font-bold tabular-nums">{state.timeLeft}</span>
+                <Button size="icon" onClick={() => dispatch({ type: "SET_TIME", seconds: state.timeLeft + 5 })}>
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 rounded-2xl border border-border p-3">
+
             <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">MANUAL SCORING</p>
             <div className="grid gap-2">
               {state.teams.map((team) => (
