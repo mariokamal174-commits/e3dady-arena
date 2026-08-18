@@ -184,7 +184,15 @@ export function reducer(state: GameState, action: Action): GameState {
         }
         return q;
       });
-      return { ...state, settings: nextSettings, questions };
+      // If the current question hasn't started yet, follow the new timer values live.
+      const cur = questions[state.currentIndex];
+      const pendingTime =
+        !state.questionStarted && !state.running && cur
+          ? cur.type === "speed"
+            ? nextSettings.speedTimer
+            : (cur.timer ?? nextSettings.defaultTimer)
+          : state.timeLeft;
+      return { ...state, settings: nextSettings, questions, timeLeft: pendingTime };
     }
 
     case "SET_TEAMS":
