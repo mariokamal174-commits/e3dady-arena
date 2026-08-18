@@ -60,6 +60,7 @@ export type Action =
   | { type: "RESTART_QUESTION" }
   | { type: "SKIP" }
   | { type: "REVEAL" }
+  | { type: "SET_TIME"; seconds: number }
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "ADJUST"; teamId: string; delta: number }
