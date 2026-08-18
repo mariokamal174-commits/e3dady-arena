@@ -322,6 +322,8 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "REVEAL":
       return { ...state, revealed: true, running: false, phase: "reveal", feedback: null };
+    case "SET_TIME":
+      return { ...state, timeLeft: Math.max(0, Math.round(action.seconds)) };
     case "PAUSE":
       return { ...state, running: false };
     case "RESUME":
