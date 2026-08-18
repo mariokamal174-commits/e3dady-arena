@@ -60,6 +60,7 @@ export type Action =
   | { type: "RESTART_QUESTION" }
   | { type: "SKIP" }
   | { type: "REVEAL" }
+  | { type: "SET_TIME"; seconds: number }
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "ADJUST"; teamId: string; delta: number }
@@ -183,7 +184,15 @@ export function reducer(state: GameState, action: Action): GameState {
         }
         return q;
       });
-      return { ...state, settings: nextSettings, questions };
+      // If the current question hasn't started yet, follow the new timer values live.
+      const cur = questions[state.currentIndex];
+      const pendingTime =
+        !state.questionStarted && !state.running && cur
+          ? cur.type === "speed"
+            ? nextSettings.speedTimer
+            : (cur.timer ?? nextSettings.defaultTimer)
+          : state.timeLeft;
+      return { ...state, settings: nextSettings, questions, timeLeft: pendingTime };
     }
 
     case "SET_TEAMS":
@@ -321,6 +330,8 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "REVEAL":
       return { ...state, revealed: true, running: false, phase: "reveal", feedback: null };
+    case "SET_TIME":
+      return { ...state, timeLeft: Math.max(0, Math.round(action.seconds)) };
     case "PAUSE":
       return { ...state, running: false };
     case "RESUME":
