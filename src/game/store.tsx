@@ -61,6 +61,7 @@ export type Action =
   | { type: "SKIP" }
   | { type: "REVEAL" }
   | { type: "SET_TIME"; seconds: number }
+  | { type: "SET_QUESTION_POINTS"; points: number }
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "ADJUST"; teamId: string; delta: number }
