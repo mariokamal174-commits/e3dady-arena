@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, Copy, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ClipboardPaste, Copy, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,92 @@ function emptyQuestion(points: number): Question {
   };
 }
 
+function parseBulkQuestions(input: string, defaultPoints: number): Question[] {
+  const markdownBlocks = input
+    .replace(/\r/g, "")
+    .split(/(?=^\s*\*\*\s*\d+[.)]\s*)/m)
+    .map((block) => block.trim())
+    .filter((block) => /^\*\*\s*\d+[.)]\s*/.test(block));
+
+  if (markdownBlocks.length) {
+    return markdownBlocks
+      .map((block) => {
+        const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+        const questionText = (lines[0] ?? "")
+          .replace(/^\*\*\s*\d+[.)]\s*/, "")
+          .replace(/\*\*\s*$/, "")
+          .trim();
+        const choices = lines
+          .filter((line) => /^[A-Dأبجد][).:-]\s*/i.test(line))
+          .slice(0, 4)
+          .map((line) => line.replace(/^[A-Dأبجد][).:-]\s*/i, "").trim());
+        const answerLine = lines.find((line) => /(?:✅|answer|الإجابة)\s*:?[\s]*[A-Dأبجد]/i.test(line));
+        const answerMatch = answerLine?.match(/[A-Dأبجد](?=\s*$)/i)?.[0].toUpperCase();
+        const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(answerMatch ?? "A");
+
+        return {
+          id: crypto.randomUUID(),
+          type: "normal" as const,
+          text: questionText,
+          choices: [...choices, "", "", "", ""].slice(0, 4),
+          correctIndex: answerIndex >= 0 ? answerIndex % 4 : 0,
+          points: defaultPoints,
+        };
+      })
+      .filter((question) => question.text && question.choices.some(Boolean));
+  }
+
+  try {
+    const parsed = JSON.parse(input) as Array<Record<string, unknown>>;
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        id: crypto.randomUUID(),
+        type: ["normal", "steal", "speed", "oral"].includes(String(item.type))
+          ? (item.type as QuestionType)
+          : "normal",
+        text: String(item.text ?? item.question ?? ""),
+        choices: Array.isArray(item.choices)
+          ? item.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
+          : ["", "", "", ""],
+        correctIndex: typeof item.correctIndex === "number" ? item.correctIndex : 0,
+        points: typeof item.points === "number" ? item.points : defaultPoints,
+        ...(item.explanation ? { explanation: String(item.explanation) } : {}),
+      }));
+    }
+  } catch {
+    // Fall through to the plain-text format.
+  }
+
+  return input
+    .split(/\n\s*\n/)
+    .map((block) => block.split("\n").map((line) => line.trim()).filter(Boolean))
+    .filter((lines) => lines.length >= 5)
+    .map((lines) => {
+      const answerLine = lines.find((line) => /^(answer|الإجابة)\s*:/i.test(line));
+      const typeLine = lines.find((line) => /^(type|النوع)\s*:/i.test(line));
+      const pointsLine = lines.find((line) => /^(points|النقاط)\s*:/i.test(line));
+      const choices = lines
+        .slice(1)
+        .filter((line) => !/^(answer|الإجابة|type|النوع|points|النقاط)\s*:/i.test(line))
+        .slice(0, 4)
+        .map((line) => line.replace(/^[A-Dأبج د][).:-]\s*/i, "").trim());
+      const answer = answerLine?.split(":").slice(1).join(":").trim().toUpperCase() ?? "A";
+      const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(answer);
+      const rawType = typeLine?.split(":").slice(1).join(":").trim().toLowerCase();
+      const type = ["normal", "steal", "speed", "oral"].includes(rawType ?? "")
+        ? (rawType as QuestionType)
+        : "normal";
+      return {
+        id: crypto.randomUUID(),
+        text: lines[0] ?? "",
+        choices: [...choices, "", "", "", ""].slice(0, 4),
+        correctIndex: answerIndex >= 0 ? answerIndex % 4 : 0,
+        points: Number(pointsLine?.split(":").pop()) || defaultPoints,
+        type,
+      };
+    });
+}
+
 function Admin() {
   const { state, dispatch } = useGame();
   const [editing, setEditing] = useState<Question | null>(null);
@@ -73,6 +159,8 @@ function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<Question[] | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
 
   const questions = state.questions;
   const setQuestions = (next: Question[]) => dispatch({ type: "SET_QUESTIONS", questions: next });
@@ -145,6 +233,9 @@ function Admin() {
               onClick={() => setAutoOpen(true)}
             >
               توليد أسئلة آليًا
+            </Button>
+            <Button className="rounded-full font-bold" variant="secondary" onClick={() => setPasteOpen(true)}>
+              <ClipboardPaste className="size-4" /> Paste questions
             </Button>
           </div>
 
@@ -359,6 +450,38 @@ function Admin() {
                   </div>
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl">Paste questions</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              value={pasteText}
+              onChange={(event) => setPasteText(event.target.value)}
+              placeholder={'Question?\nChoice A\nChoice B\nChoice C\nChoice D\nAnswer: B\n\nNext question...'}
+              className="min-h-72 rounded-xl bg-white/5 font-mono text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPasteOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => {
+                  const imported = parseBulkQuestions(pasteText, state.settings.defaultPoints);
+                  if (!imported.length) {
+                    toast.error("لم يتم العثور على أسئلة صالحة");
+                    return;
+                  }
+                  setQuestions([...questions, ...imported]);
+                  setPasteText("");
+                  setPasteOpen(false);
+                  toast.success(`تمت إضافة ${imported.length} أسئلة`);
+                }}
+              >
+                Add questions
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
