@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Archive, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -168,8 +168,16 @@ function GameSetup() {
                     />
                   ))}
                 </div>
-                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => { setEditingMembersFor(team.id); setLocalMembers(team.members ? team.members.map(m => ({ ...m })) : []); }}>
-                  Members
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-11 rounded-xl px-4 font-bold shadow-sm"
+                  onClick={() => {
+                    setEditingMembersFor(team.id);
+                    setLocalMembers(team.members ? team.members.map((m) => ({ ...m })) : []);
+                  }}
+                >
+                  <Pencil className="size-4" /> Edit members
                 </Button>
                 {adminUnlocked ? (
                   <>

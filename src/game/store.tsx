@@ -409,15 +409,22 @@ export function reducer(state: GameState, action: Action): GameState {
           return { ...team, members: team.members.map((member) => ({ ...member })) };
         }),
       };
-      return { ...state, scoreArchives: [archive, ...(state.scoreArchives ?? [])].slice(0, 20) };
+      return {
+        ...state,
+        teams: state.teams.map((team) => ({ ...team, score: 0 })),
+        scoreBumps: {},
+        scoreArchives: [archive, ...(state.scoreArchives ?? [])].slice(0, 20),
+      };
     }
     case "RESTORE_SCORES": {
       const archive = (state.scoreArchives ?? []).find((item) => item.id === action.archiveId);
       if (!archive) return state;
-      const scores = new Map(archive.teams.map((team) => [team.id, team.score]));
       return {
         ...state,
-        teams: state.teams.map((team) => ({ ...team, score: scores.get(team.id) ?? 0 })),
+        teams: archive.teams.map((team) => ({
+          ...team,
+          members: team.members?.map((member) => ({ ...member })),
+        })),
         scoreBumps: {},
       };
     }
