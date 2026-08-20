@@ -82,6 +82,18 @@ function currentQuestion(state: GameState): Question | undefined {
   return state.questions[state.currentIndex];
 }
 
+function migrateQuestionPoints(questions: Question[], settings: GameSettings): Question[] {
+  return questions.map((question) => {
+    if (question.type === "speed" && question.points === initialState.settings.speedPoints) {
+      return { ...question, points: settings.speedPoints };
+    }
+    if (question.type !== "speed" && question.points === initialState.settings.defaultPoints) {
+      return { ...question, points: settings.defaultPoints };
+    }
+    return question;
+  });
+}
+
 function loadQuestion(state: GameState, index: number): GameState {
   const question = state.questions[index];
   if (!question) return { ...state, phase: "over", running: false, feedback: null };
@@ -175,10 +187,28 @@ function afterWrong(state: GameState, teamId: string): GameState {
 
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
-    case "HYDRATE":
-      return { ...action.state, questionStarted: action.state.questionStarted ?? true };
+    case "HYDRATE": {
+      const settings = { ...initialState.settings, ...action.state.settings };
+      return {
+        ...action.state,
+        settings,
+        questions: migrateQuestionPoints(action.state.questions, settings),
+        questionStarted: action.state.questionStarted ?? true,
+      };
+    }
     case "REMOTE":
-      return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
+      {
+        const settings = { ...state.settings, ...action.state.settings };
+        return {
+          ...state,
+          ...action.state,
+          settings,
+          questions: action.state.questions
+            ? migrateQuestionPoints(action.state.questions, settings)
+            : state.questions,
+          questionStarted: action.state.questionStarted ?? true,
+        };
+      }
     case "SET_SETTINGS": {
       const nextSettings = { ...state.settings, ...action.settings };
       // Keep existing questions in sync when the default point values change,
@@ -269,8 +299,10 @@ export function reducer(state: GameState, action: Action): GameState {
 
       const points =
         state.phase === "steal-answer"
-          ? (state.settings.stealPoints ?? question.points)
-          : question.points;
+          ? state.settings.stealPoints
+          : question.type === "speed"
+            ? state.settings.speedPoints
+            : state.settings.defaultPoints;
       return award(withChoice, teamId, points);
     }
     case "ORAL_SELECT": {
@@ -291,8 +323,10 @@ export function reducer(state: GameState, action: Action): GameState {
       if (action.correct) {
         const points =
           state.phase === "steal-answer"
-            ? (state.settings.stealPoints ?? question.points)
-            : question.points;
+            ? state.settings.stealPoints
+            : question.type === "speed"
+              ? state.settings.speedPoints
+              : state.settings.defaultPoints;
         return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
       }
       return afterWrong({ ...state, activeTeamId: action.teamId, running: false }, action.teamId);
