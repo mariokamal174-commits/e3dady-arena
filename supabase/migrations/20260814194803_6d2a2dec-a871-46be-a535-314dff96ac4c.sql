@@ -1,0 +1,2 @@
+create policy "question images read" on storage.objects for select to anon, authenticated using (bucket_id = 'question-images');
+create policy "question images insert" on storage.objects for insert to anon, authenticated with check (bucket_id = 'question-images');

@@ -26,7 +26,7 @@ import {
 import { useGame } from "@/game/store";
 
 export function GameControls() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, adminUnlocked } = useGame();
 
   return (
     <Sheet>
@@ -71,13 +71,142 @@ export function GameControls() {
           </div>
 
           <div className="mt-2 rounded-2xl border border-border p-3">
+            <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">POINTS (الدرجات)</p>
+            <div className="grid gap-2">
+              {(
+                [
+                  { key: "defaultPoints", label: "سؤال عادي" },
+                  { key: "stealPoints", label: "سرقة" },
+                  { key: "speedPoints", label: "سرعة" },
+                ] as const
+              ).map((row) => (
+                <div key={row.key} className="flex items-center gap-2">
+                  <span className="flex-1 text-sm font-semibold">{row.label}</span>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: Math.max(0, state.settings[row.key] - 5) },
+                      })
+                    }
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <span className="w-10 text-center font-bold tabular-nums">{state.settings[row.key]}</span>
+                  <Button
+                    size="icon"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: state.settings[row.key] + 5 },
+                      })
+                    }
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t border-border pt-2">
+                <span className="flex-1 text-sm font-semibold">درجة السؤال الحالي</span>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_QUESTION_POINTS",
+                      points: (state.questions[state.currentIndex]?.points ?? 0) - 5,
+                    })
+                  }
+                >
+                  <Minus className="size-4" />
+                </Button>
+                <span className="w-10 text-center font-bold tabular-nums">
+                  {state.questions[state.currentIndex]?.points ?? 0}
+                </span>
+                <Button
+                  size="icon"
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_QUESTION_POINTS",
+                      points: (state.questions[state.currentIndex]?.points ?? 0) + 5,
+                    })
+                  }
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 rounded-2xl border border-border p-3">
+
+            <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">TIMERS (ثواني)</p>
+            <div className="grid gap-2">
+              {(
+                [
+                  { key: "defaultTimer", label: "سؤال عادي" },
+                  { key: "stealTimer", label: "سرقة" },
+                  { key: "speedTimer", label: "سرعة" },
+                ] as const
+              ).map((row) => (
+                <div key={row.key} className="flex items-center gap-2">
+                  <span className="flex-1 text-sm font-semibold">{row.label}</span>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: Math.max(5, state.settings[row.key] - 5) },
+                      })
+                    }
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <span className="w-8 text-center font-bold tabular-nums">{state.settings[row.key]}</span>
+                  <Button
+                    size="icon"
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_SETTINGS",
+                        settings: { [row.key]: Math.min(300, state.settings[row.key] + 5) },
+                      })
+                    }
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t border-border pt-2">
+                <span className="flex-1 text-sm font-semibold">الوقت الحالي</span>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  onClick={() => dispatch({ type: "SET_TIME", seconds: state.timeLeft - 5 })}
+                >
+                  <Minus className="size-4" />
+                </Button>
+                <span className="w-8 text-center font-bold tabular-nums">{state.timeLeft}</span>
+                <Button size="icon" onClick={() => dispatch({ type: "SET_TIME", seconds: state.timeLeft + 5 })}>
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 rounded-2xl border border-border p-3">
+
             <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">MANUAL SCORING</p>
             <div className="grid gap-2">
               {state.teams.map((team) => (
                 <div key={team.id} className="flex items-center gap-2">
                   <span className="w-8 text-lg">{team.icon}</span>
                   <span className="flex-1 truncate text-sm font-semibold">{team.name}</span>
-                  <span className="w-10 text-right font-bold tabular-nums">{team.score}</span>
+                  <span className="w-10 text-right font-bold tabular-nums">
+                    {adminUnlocked ? team.score : "••"}
+                  </span>
                   <Button
                     size="icon"
                     variant="secondary"

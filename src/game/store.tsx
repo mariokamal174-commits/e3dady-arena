@@ -6,11 +6,12 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
-import { playSound, setSoundEnabled, unlockAudio } from "./audio";
+import { playSound, setSoundEnabled, setVolume, unlockAudio } from "./audio";
 import type { GameSettings, GameState, LifelineKind, Question, Team } from "./types";
 
 const STORAGE_KEY = "quiz-arena-state-v1";
@@ -26,6 +27,7 @@ export const initialState: GameState = {
   attemptedTeamIds: [],
   timeLeft: 0,
   running: false,
+  questionStarted: false,
   scored: false,
   revealed: false,
   selectedChoice: null,
@@ -59,6 +61,8 @@ export type Action =
   | { type: "RESTART_QUESTION" }
   | { type: "SKIP" }
   | { type: "REVEAL" }
+  | { type: "SET_TIME"; seconds: number }
+  | { type: "SET_QUESTION_POINTS"; points: number }
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "ADJUST"; teamId: string; delta: number }
@@ -88,7 +92,8 @@ function loadQuestion(state: GameState, index: number): GameState {
     activeTeamId: isSpeed ? null : (turnTeam?.id ?? null),
     attemptedTeamIds: [],
     timeLeft: isSpeed ? state.settings.speedTimer : (question.timer ?? state.settings.defaultTimer),
-    running: true,
+    running: false,
+    questionStarted: false,
     scored: false,
     revealed: false,
     selectedChoice: null,
@@ -126,7 +131,24 @@ function afterWrong(state: GameState, teamId: string): GameState {
     ? state.attemptedTeamIds
     : [...state.attemptedTeamIds, teamId];
   const remaining = state.teams.filter((t) => !attempted.includes(t.id));
-  const base = { ...state, attemptedTeamIds: attempted, selectedChoice: null, activeTeamId: null };
+
+  // Wrong-answer penalty
+  const penalty = state.settings.penalty ?? "none";
+  const loss = penalty === "half" ? Math.round((question?.points ?? 0) / 2) : 0;
+  const penalized: GameState = loss
+    ? {
+        ...state,
+        teams: state.teams.map((t) => (t.id === teamId ? { ...t, score: t.score - loss } : t)),
+        scoreBumps: { ...state.scoreBumps, [teamId]: -loss },
+      }
+    : state;
+
+  const base = { ...penalized, attemptedTeamIds: attempted, selectedChoice: null, activeTeamId: null };
+
+  if (penalty === "pass") {
+    // Turn passes immediately — no steal, no buzz back in.
+    return { ...base, phase: "reveal", revealed: true, running: false, feedback: { kind: "wrong", teamId } };
+  }
 
   if (remaining.length === 0) {
     return { ...base, phase: "reveal", revealed: true, running: false, feedback: { kind: "wrong", teamId } };
@@ -146,11 +168,35 @@ function afterWrong(state: GameState, teamId: string): GameState {
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "HYDRATE":
-      return action.state;
+      return { ...action.state, questionStarted: action.state.questionStarted ?? true };
     case "REMOTE":
-      return { ...state, ...action.state };
-    case "SET_SETTINGS":
-      return { ...state, settings: { ...state.settings, ...action.settings } };
+      return { ...state, ...action.state, questionStarted: action.state.questionStarted ?? true };
+    case "SET_SETTINGS": {
+      const nextSettings = { ...state.settings, ...action.settings };
+      // Keep existing questions in sync when the default point values change,
+      // so questions that still use the old default follow the new one.
+      const oldDefault = state.settings.defaultPoints;
+      const oldSpeed = state.settings.speedPoints;
+      const questions = state.questions.map((q) => {
+        if (q.type === "speed" && oldSpeed !== nextSettings.speedPoints && q.points === oldSpeed) {
+          return { ...q, points: nextSettings.speedPoints };
+        }
+        if (q.type !== "speed" && oldDefault !== nextSettings.defaultPoints && q.points === oldDefault) {
+          return { ...q, points: nextSettings.defaultPoints };
+        }
+        return q;
+      });
+      // If the current question hasn't started yet, follow the new timer values live.
+      const cur = questions[state.currentIndex];
+      const pendingTime =
+        !state.questionStarted && !state.running && cur
+          ? cur.type === "speed"
+            ? nextSettings.speedTimer
+            : (cur.timer ?? nextSettings.defaultTimer)
+          : state.timeLeft;
+      return { ...state, settings: nextSettings, questions, timeLeft: pendingTime };
+    }
+
     case "SET_TEAMS":
       return { ...state, teams: action.teams };
     case "SET_QUESTIONS":
@@ -220,9 +266,12 @@ export function reducer(state: GameState, action: Action): GameState {
       return award(withChoice, teamId, points);
     }
     case "ORAL_SELECT": {
-      if (!currentQuestion(state)?.type || currentQuestion(state)?.type !== "oral") return state;
+      const q = currentQuestion(state);
+      if (!q || q.type !== "oral") return state;
+      if (state.attemptedTeamIds.includes(action.teamId)) return state;
       return {
         ...state,
+        phase: state.phase === "steal-select" ? "steal-answer" : state.phase,
         activeTeamId: action.teamId,
         running: false,
         feedback: null,
@@ -232,17 +281,15 @@ export function reducer(state: GameState, action: Action): GameState {
       const question = currentQuestion(state);
       if (!question || question.type !== "oral") return state;
       if (action.correct) {
-        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, question.points);
+        const points =
+          state.phase === "steal-answer"
+            ? (state.settings.stealPoints ?? question.points)
+            : question.points;
+        return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
       }
-      return {
-        ...state,
-        activeTeamId: action.teamId,
-        running: false,
-        phase: "reveal",
-        revealed: true,
-        feedback: { kind: "wrong", teamId: action.teamId },
-      };
+      return afterWrong({ ...state, activeTeamId: action.teamId, running: false }, action.teamId);
     }
+
     case "CLAIM": {
       if (state.attemptedTeamIds.includes(action.teamId)) return state;
       if (state.phase === "steal-select") {
@@ -285,11 +332,20 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "REVEAL":
       return { ...state, revealed: true, running: false, phase: "reveal", feedback: null };
+    case "SET_TIME":
+      return { ...state, timeLeft: Math.max(0, Math.round(action.seconds)) };
+    case "SET_QUESTION_POINTS": {
+      const pts = Math.max(0, Math.round(action.points));
+      return {
+        ...state,
+        questions: state.questions.map((q, i) => (i === state.currentIndex ? { ...q, points: pts } : q)),
+      };
+    }
     case "PAUSE":
       return { ...state, running: false };
     case "RESUME":
       return state.timeLeft > 0 && state.phase !== "reveal" && state.phase !== "over"
-        ? { ...state, running: true }
+        ? { ...state, running: true, questionStarted: true }
         : state;
     case "ADJUST":
       return {
@@ -400,6 +456,8 @@ function loadPersisted(pathname = "/"): GameState | null {
       questions: parsed.questions,
     };
 
+    if (pathname === "/watch") return null;
+
     if (pathname !== "/play") {
       return {
         ...base,
@@ -441,26 +499,19 @@ const ROOM_ID = "main";
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   // admin unlocked flag persisted in localStorage
-  const [adminUnlocked, setAdminUnlocked] = ((): [boolean, (v: boolean) => void] => {
-    const { useState } = require("react");
-    const [s, setS] = useState<boolean>(() => {
-      try {
-        const stored = typeof window !== "undefined" ? window.localStorage.getItem("quiz-admin-unlocked") : null;
-        return stored === "true";
-      } catch {
-        return false;
-      }
-    });
-    return [
-      s,
-      (v: boolean) => {
-        try {
-          if (typeof window !== "undefined") window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
-        } catch {}
-        setS(v);
-      },
-    ];
-  })();
+  const [adminUnlockedState, setAdminUnlockedState] = useState(false);
+  useEffect(() => {
+    try {
+      setAdminUnlockedState(window.localStorage.getItem("quiz-admin-unlocked") === "true");
+    } catch {}
+  }, []);
+  const adminUnlocked = adminUnlockedState;
+  const setAdminUnlocked = useCallback((v: boolean) => {
+    try {
+      window.localStorage.setItem("quiz-admin-unlocked", v ? "true" : "false");
+    } catch {}
+    setAdminUnlockedState(v);
+  }, []);
   const hydrated = useRef(false);
   const clientId = useRef<string>(Math.random().toString(36).slice(2));
   const shouldPush = useRef(false);
@@ -547,6 +598,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSoundEnabled(state.settings.sound);
   }, [state.settings.sound]);
+
+  useEffect(() => {
+    setVolume(state.settings.volume ?? 1);
+  }, [state.settings.volume]);
 
   useEffect(() => {
     const unlock = () => unlockAudio();

@@ -2,9 +2,15 @@
 
 let ctx: AudioContext | null = null;
 let enabled = true;
+let volume = 1;
 
 export function setSoundEnabled(value: boolean) {
   enabled = value;
+}
+
+/** Master volume multiplier, 0 (mute) .. 1 (full). */
+export function setVolume(value: number) {
+  volume = Math.min(1, Math.max(0, value));
 }
 
 function getCtx(): AudioContext | null {
@@ -35,7 +41,8 @@ interface ToneOptions {
 
 function tone({ freq, duration = 0.18, type = "sine", delay = 0, gain = 0.18, sweepTo }: ToneOptions) {
   const audio = getCtx();
-  if (!audio || !enabled) return;
+  if (!audio || !enabled || volume <= 0) return;
+  const level = gain * volume;
   const t0 = audio.currentTime + delay;
   const osc = audio.createOscillator();
   const vol = audio.createGain();
@@ -43,7 +50,7 @@ function tone({ freq, duration = 0.18, type = "sine", delay = 0, gain = 0.18, sw
   osc.frequency.setValueAtTime(freq, t0);
   if (sweepTo) osc.frequency.exponentialRampToValueAtTime(Math.max(40, sweepTo), t0 + duration);
   vol.gain.setValueAtTime(0.0001, t0);
-  vol.gain.exponentialRampToValueAtTime(gain, t0 + 0.015);
+  vol.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), t0 + 0.015);
   vol.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
   osc.connect(vol).connect(audio.destination);
   osc.start(t0);
