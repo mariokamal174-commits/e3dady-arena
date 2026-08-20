@@ -83,7 +83,9 @@ function parseBulkQuestions(input: string, defaultPoints: number): Question[] {
           .slice(0, 4)
           .map((line) => line.replace(/^[A-Dأبجد][).:-]\s*/i, "").trim());
         const answerLine = lines.find((line) => /✅|^(answer|الإجابة)\s*:/i.test(line));
-        const answerMatch = answerLine?.match(/(?:✅|^(?:answer|الإجابة)\s*:)\s*([A-Dأبجد])/i)?.[1];
+        const answerMatch =
+          answerLine?.match(/✅[^A-Dأبجد]*([A-Dأبجد])/i)?.[1] ??
+          answerLine?.match(/^(?:answer|الإجابة)\s*:\s*([A-Dأبجد])/i)?.[1];
         const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(
           answerMatch?.toUpperCase() ?? "A",
         );
