@@ -67,6 +67,12 @@ function Admin() {
   const { state, dispatch } = useGame();
   const [editing, setEditing] = useState<Question | null>(null);
   const [preview, setPreview] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [autoCategories, setAutoCategories] = useState<string[]>([]);
+  const [autoCount, setAutoCount] = useState(10);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState<Question[] | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const questions = state.questions;
   const setQuestions = (next: Question[]) => dispatch({ type: "SET_QUESTIONS", questions: next });
