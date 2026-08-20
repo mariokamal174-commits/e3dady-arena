@@ -97,6 +97,7 @@ export function WinnerScreen() {
           size="lg"
           className="rounded-full px-8 text-base font-bold"
           onClick={() => {
+            dispatch({ type: "ARCHIVE_SCORES" });
             dispatch({ type: "RESET_SCORES" });
             dispatch({ type: "START_GAME" });
           }}

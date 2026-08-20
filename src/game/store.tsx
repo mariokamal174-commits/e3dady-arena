@@ -12,7 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
 import { playSound, setSoundEnabled, setVolume, unlockAudio } from "./audio";
-import type { GameSettings, GameState, LifelineKind, Question, Team } from "./types";
+import type { GameSettings, GameState, LifelineKind, Question, ScoreArchive, Team } from "./types";
 
 const STORAGE_KEY = "quiz-arena-state-v1";
 
@@ -39,6 +39,7 @@ export const initialState: GameState = {
   removedChoices: [],
   lifelinesUsed: {},
   lifelineNotice: null,
+  scoreArchives: [],
 };
 
 export type Action =
@@ -67,6 +68,8 @@ export type Action =
   | { type: "RESUME" }
   | { type: "ADJUST"; teamId: string; delta: number }
   | { type: "RESET_SCORES" }
+  | { type: "ARCHIVE_SCORES" }
+  | { type: "RESTORE_SCORES"; archiveId: string }
   | { type: "END_GAME" }
   | { type: "BACK_TO_SETUP" }
   | { type: "CLEAR_FEEDBACK" }
@@ -115,7 +118,12 @@ function award(state: GameState, teamId: string, points: number): GameState {
     revealed: true,
     running: false,
     phase: "reveal",
-    feedback: { kind: "correct", points, teamId, answererId: state.lastAnswerer?.memberId },
+    feedback: {
+      kind: "correct",
+      points,
+      teamId,
+      ...(state.lastAnswerer?.memberId ? { answererId: state.lastAnswerer.memberId } : {}),
+    },
     history: question
       ? [
           ...state.history.filter((h) => h.questionId !== question.id),
@@ -357,12 +365,37 @@ export function reducer(state: GameState, action: Action): GameState {
       };
     case "RESET_SCORES":
       return { ...state, teams: state.teams.map((t) => ({ ...t, score: 0 })), scoreBumps: {} };
+    case "ARCHIVE_SCORES": {
+      if (!state.teams.some((team) => team.score !== 0)) return state;
+      const archive: ScoreArchive = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        teams: state.teams.map((team) => {
+          if (!team.members) return { ...team };
+          return { ...team, members: team.members.map((member) => ({ ...member })) };
+        }),
+      };
+      return { ...state, scoreArchives: [archive, ...(state.scoreArchives ?? [])].slice(0, 20) };
+    }
+    case "RESTORE_SCORES": {
+      const archive = (state.scoreArchives ?? []).find((item) => item.id === action.archiveId);
+      if (!archive) return state;
+      const scores = new Map(archive.teams.map((team) => [team.id, team.score]));
+      return {
+        ...state,
+        teams: state.teams.map((team) => ({ ...team, score: scores.get(team.id) ?? 0 })),
+        scoreBumps: {},
+      };
+    }
     case "END_GAME":
       return { ...state, phase: "over", running: false, feedback: null };
     case "BACK_TO_SETUP":
       return { ...state, phase: "idle", running: false, feedback: null, scoreBumps: {} };
-    case "CLEAR_FEEDBACK":
-      return { ...state, feedback: null, lastAnswerer: undefined };
+    case "CLEAR_FEEDBACK": {
+      const nextState = { ...state, feedback: null };
+      delete nextState.lastAnswerer;
+      return nextState;
+    }
     case "SET_ANSWERER":
       return { ...state, lastAnswerer: { teamId: action.teamId, memberId: action.memberId } };
     case "TOGGLE_CHOICES":
@@ -479,6 +512,7 @@ function loadPersisted(pathname = "/"): GameState | null {
         removedChoices: [],
         lifelinesUsed: {},
         lifelineNotice: null,
+        scoreArchives: parsed.scoreArchives ?? [],
       };
     }
 

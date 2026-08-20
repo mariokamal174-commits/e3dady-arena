@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Plus, Trash2 } from "lucide-react";
+import { Archive, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,8 +71,8 @@ function GameSetup() {
   const [adminPass, setAdminPass] = useState("");
   const navigate = useNavigate();
   const { settings, teams, questions } = state;
-  const [editingMembersFor, setEditingMembersFor] = require("react").useState<string | null>(null);
-  const [localMembers, setLocalMembers] = require("react").useState<Member[]>([]);
+  const [editingMembersFor, setEditingMembersFor] = useState<string | null>(null);
+  const [localMembers, setLocalMembers] = useState<Member[]>([]);
 
   const updateTeam = (id: string, patch: Partial<Team>) =>
     dispatch({ type: "SET_TEAMS", teams: teams.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
@@ -97,8 +97,12 @@ function GameSetup() {
     void navigate({ to: "/play" });
   };
 
+  const formatArchiveDate = (value: string) =>
+    new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-10 md:py-16">
+    <>
+      <main className="mx-auto w-full max-w-6xl px-5 py-10 md:py-16">
       <motion.header
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
@@ -307,11 +311,50 @@ function GameSetup() {
           </div>
         </section>
       </div>
-    </main>
-      <MembersDialog teamId={editingMembersFor} members={localMembers} onClose={() => { setEditingMembersFor(null); setLocalMembers([]); }} onSave={(m) => {
-        // persist members into teams
-        dispatch({ type: "SET_TEAMS", teams: teams.map(t => (t.id === editingMembersFor ? { ...t, members: m } : t)) });
-      }} />
+
+      <section className="mx-auto mt-5 w-full max-w-6xl px-5 pb-10">
+        <div className="glass rounded-3xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-2xl font-black">Score archive</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Save finished scores and restore them whenever you need.</p>
+            </div>
+            <Button
+              variant="secondary"
+              className="rounded-full"
+              disabled={!teams.some((team) => team.score !== 0)}
+              onClick={() => dispatch({ type: "ARCHIVE_SCORES" })}
+            >
+              <Archive className="size-4" /> Archive current scores
+            </Button>
+          </div>
+          {state.scoreArchives.length > 0 ? (
+            <div className="mt-4 grid gap-2">
+              {state.scoreArchives.map((archive) => (
+                <div key={archive.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-white/5 px-4 py-3">
+                  <span className="flex-1 font-semibold">{formatArchiveDate(archive.createdAt)}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {archive.teams.map((team) => `${team.name}: ${team.score}`).join(" · ")}
+                  </span>
+                  <Button size="sm" variant="ghost" className="rounded-full" onClick={() => dispatch({ type: "RESTORE_SCORES", archiveId: archive.id })}>
+                    <RotateCcw className="size-4" /> Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">No archived scores yet.</p>
+          )}
+        </div>
+      </section>
+      </main>
+      <MembersDialog
+        teamId={editingMembersFor}
+        members={localMembers}
+        onClose={() => { setEditingMembersFor(null); setLocalMembers([]); }}
+        onSave={(m) => dispatch({ type: "SET_TEAMS", teams: teams.map((t) => (t.id === editingMembersFor ? { ...t, members: m } : t)) })}
+      />
+    </>
   );
 }
 
@@ -322,10 +365,10 @@ export function MembersDialogHost(props: { teamId: string | null; members: Membe
 
 // Members editor dialog placed outside component for clarity
 function MembersDialog({ teamId, members, onClose, onSave }: { teamId: string | null; members: Member[]; onClose: () => void; onSave: (m: Member[]) => void; }) {
-  const [local, setLocal] = require("react").useState<Member[]>(members || []);
+  const [local, setLocal] = useState<Member[]>(members || []);
 
   // sync when props change
-  require("react").useEffect(() => setLocal(members || []), [members]);
+  useEffect(() => setLocal(members || []), [members]);
 
   const uploadPhoto = async (file: File, teamId: string) => {
     try {
@@ -372,7 +415,7 @@ function MembersDialog({ teamId, members, onClose, onSave }: { teamId: string | 
             ))}
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setLocal([...local, { id: crypto.randomUUID(), name: "", photoUrl: undefined }])}>Add member</Button>
+            <Button onClick={() => setLocal([...local, { id: crypto.randomUUID(), name: "" }])}>Add member</Button>
             <div className="flex-1" />
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
             <Button onClick={() => { onSave(local); onClose(); }}>Save</Button>
