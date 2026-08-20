@@ -407,9 +407,20 @@ function MembersDialog({ teamId, members, onClose, onSave }: { teamId: string | 
                     const file = e.target.files?.[0];
                     if (!file || !teamId) return;
                     const url = await uploadPhoto(file, teamId);
-                    if (url) setLocal(local.map((x, idx) => (idx === i ? { ...x, photoUrl: url } : x)));
+                    if (url) {
+                      setLocal((current) =>
+                        current.map((member, index) => (index === i ? { ...member, photoUrl: url } : member)),
+                      );
+                    }
                   }}
                 />
+                {m.photoUrl ? (
+                  <img
+                    src={m.photoUrl}
+                    alt={m.name || "Member photo"}
+                    className="size-10 rounded-full object-cover"
+                  />
+                ) : null}
                 <button type="button" onClick={() => setLocal(local.filter((_, idx) => idx !== i))} className="text-destructive">Remove</button>
               </div>
             ))}

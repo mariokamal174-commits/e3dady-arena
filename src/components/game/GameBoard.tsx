@@ -166,10 +166,13 @@ export function GameBoard({ spectator = false }: { spectator?: boolean }) {
                 type="button"
                 onClick={() => dispatch({ type: "SET_ANSWERER", teamId: spotlightTeam.id, memberId: m.id })}
                 className="grid size-12 place-items-center overflow-hidden rounded-full border-2"
-                style={{ backgroundImage: `url(${m.photoUrl ?? ""})`, backgroundSize: "cover", width: 48, height: 48 }}
                 aria-label={m.name}
               >
-                {!m.photoUrl ? m.name.charAt(0) : null}
+                {m.photoUrl ? (
+                  <img src={m.photoUrl} alt={m.name} className="size-full object-cover" />
+                ) : (
+                  m.name.charAt(0)
+                )}
               </button>
             ))}
           </div>

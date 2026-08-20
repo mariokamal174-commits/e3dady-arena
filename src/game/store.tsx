@@ -560,7 +560,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const pushState = useCallback(async (nextState: GameState) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from("game_rooms")
         .upsert({
           id: ROOM_ID,
@@ -568,6 +568,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           sender: clientId.current,
           updated_at: new Date().toISOString(),
         });
+      if (error) throw error;
     } catch (error) {
       console.error("[game sync] failed to push state", error);
     }
