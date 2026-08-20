@@ -168,17 +168,22 @@ function GameSetup() {
                     />
                   ))}
                 </div>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-11 rounded-xl px-4 font-bold shadow-sm"
-                  onClick={() => {
-                    setEditingMembersFor(team.id);
-                    setLocalMembers(team.members ? team.members.map((m) => ({ ...m })) : []);
-                  }}
-                >
-                  <Pencil className="size-4" /> Edit members
-                </Button>
+                <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 p-1.5">
+                  <span className="px-1 text-xs font-bold text-primary">
+                    {team.members?.length ?? 0} members
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-9 rounded-lg px-3 font-bold shadow-sm"
+                    onClick={() => {
+                      setEditingMembersFor(team.id);
+                      setLocalMembers(team.members ? team.members.map((m) => ({ ...m })) : []);
+                    }}
+                  >
+                    <Pencil className="size-4" /> Edit members
+                  </Button>
+                </div>
                 {adminUnlocked ? (
                   <>
                     <Input
@@ -394,7 +399,7 @@ function MembersDialog({ teamId, members, onClose, onSave }: { teamId: string | 
 
   return (
     <Dialog open={Boolean(teamId)} onOpenChange={() => onClose()}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Edit members</DialogTitle>
         </DialogHeader>
