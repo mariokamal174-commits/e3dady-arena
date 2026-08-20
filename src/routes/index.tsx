@@ -4,10 +4,12 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { GameProvider, useGame } from "@/game/store";
 import { TEAM_ICONS, TEAM_PALETTE } from "@/game/demo";
-import type { Team } from "@/game/types";
+import type { Team, Member } from "@/game/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -68,6 +70,8 @@ function GameSetup() {
   const [adminPass, setAdminPass] = require("react").useState("");
   const navigate = useNavigate();
   const { settings, teams, questions } = state;
+  const [editingMembersFor, setEditingMembersFor] = require("react").useState<string | null>(null);
+  const [localMembers, setLocalMembers] = require("react").useState<Member[]>([]);
 
   const updateTeam = (id: string, patch: Partial<Team>) =>
     dispatch({ type: "SET_TEAMS", teams: teams.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
@@ -159,6 +163,9 @@ function GameSetup() {
                     />
                   ))}
                 </div>
+                <Button size="sm" variant="secondary" className="rounded-full" onClick={() => { setEditingMembersFor(team.id); setLocalMembers(team.members ? team.members.map(m => ({ ...m })) : []); }}>
+                  Members
+                </Button>
                 {adminUnlocked ? (
                   <>
                     <Input
@@ -300,5 +307,77 @@ function GameSetup() {
         </section>
       </div>
     </main>
+      <MembersDialog teamId={editingMembersFor} members={localMembers} onClose={() => { setEditingMembersFor(null); setLocalMembers([]); }} onSave={(m) => {
+        // persist members into teams
+        dispatch({ type: "SET_TEAMS", teams: teams.map(t => (t.id === editingMembersFor ? { ...t, members: m } : t)) });
+      }} />
+  );
+}
+
+// Render MembersDialog from GameSetup via DOM injection
+export function MembersDialogHost(props: { teamId: string | null; members: Member[]; onClose: () => void; onSave: (m: Member[]) => void; }) {
+  return <MembersDialog teamId={props.teamId} members={props.members} onClose={props.onClose} onSave={props.onSave} />;
+}
+
+// Members editor dialog placed outside component for clarity
+function MembersDialog({ teamId, members, onClose, onSave }: { teamId: string | null; members: Member[]; onClose: () => void; onSave: (m: Member[]) => void; }) {
+  const [local, setLocal] = require("react").useState<Member[]>(members || []);
+
+  // sync when props change
+  require("react").useEffect(() => setLocal(members || []), [members]);
+
+  const uploadPhoto = async (file: File, teamId: string) => {
+    try {
+      const path = `avatars/${teamId}/${crypto.randomUUID()}-${file.name}`;
+      const { data, error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const publicUrl = supabase.storage.from("avatars").getPublicUrl(data.path).data.publicUrl;
+      return publicUrl;
+    } catch (e) {
+      console.error(e);
+      window.alert("فشل رفع الصورة. تأكد من إعداد الـ storage bucket 'avatars'.");
+      return undefined;
+    }
+  };
+
+  return (
+    <Dialog open={Boolean(teamId)} onOpenChange={() => onClose()}>
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">Edit members</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid gap-2">
+            {local.map((m, i) => (
+              <div key={m.id} className="flex items-center gap-2">
+                <input
+                  placeholder="Member name"
+                  value={m.name}
+                  onChange={(e) => setLocal(local.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))}
+                  className="h-10 rounded-xl bg-white/5 flex-1 px-3"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !teamId) return;
+                    const url = await uploadPhoto(file, teamId);
+                    if (url) setLocal(local.map((x, idx) => (idx === i ? { ...x, photoUrl: url } : x)));
+                  }}
+                />
+                <button type="button" onClick={() => setLocal(local.filter((_, idx) => idx !== i))} className="text-destructive">Remove</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setLocal([...local, { id: crypto.randomUUID(), name: "", photoUrl: undefined }])}>Add member</Button>
+            <div className="flex-1" />
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => { onSave(local); onClose(); }}>Save</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

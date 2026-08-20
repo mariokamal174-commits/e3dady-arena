@@ -53,6 +53,7 @@ export type Action =
   | { type: "ORAL_SELECT"; teamId: string }
   | { type: "ORAL_RESULT"; teamId: string; correct: boolean }
   | { type: "CLAIM"; teamId: string }
+  | { type: "SET_ANSWERER"; teamId: string; memberId: string }
   | { type: "NEXT" }
   | { type: "PREV" }
   | { type: "RESTART_QUESTION" }
@@ -109,7 +110,7 @@ function award(state: GameState, teamId: string, points: number): GameState {
     revealed: true,
     running: false,
     phase: "reveal",
-    feedback: { kind: "correct", points, teamId },
+    feedback: { kind: "correct", points, teamId, answererId: state.lastAnswerer?.memberId },
     history: question
       ? [
           ...state.history.filter((h) => h.questionId !== question.id),
@@ -305,7 +306,9 @@ export function reducer(state: GameState, action: Action): GameState {
     case "BACK_TO_SETUP":
       return { ...state, phase: "idle", running: false, feedback: null, scoreBumps: {} };
     case "CLEAR_FEEDBACK":
-      return { ...state, feedback: null };
+      return { ...state, feedback: null, lastAnswerer: undefined };
+    case "SET_ANSWERER":
+      return { ...state, lastAnswerer: { teamId: action.teamId, memberId: action.memberId } };
     case "TOGGLE_CHOICES":
       return { ...state, choicesHidden: !state.choicesHidden };
     case "TOGGLE_SCORES":

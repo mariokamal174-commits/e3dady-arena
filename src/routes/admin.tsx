@@ -63,6 +63,11 @@ function Admin() {
   const { state, dispatch } = useGame();
   const [editing, setEditing] = useState<Question | null>(null);
   const [preview, setPreview] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [autoCount, setAutoCount] = useState(50);
+  const [autoCategories, setAutoCategories] = useState<string[]>(["عام"]);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState<Question[] | null>(null);
 
   const questions = state.questions;
   const setQuestions = (next: Question[]) => dispatch({ type: "SET_QUESTIONS", questions: next });
@@ -119,12 +124,21 @@ function Admin() {
         </TabsList>
 
         <TabsContent value="questions" className="mt-5 space-y-3">
-          <Button
-            className="rounded-full font-bold"
-            onClick={() => setEditing(emptyQuestion(state.settings.defaultPoints))}
-          >
-            <Plus className="size-4" /> New question
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="rounded-full font-bold"
+              onClick={() => setEditing(emptyQuestion(state.settings.defaultPoints))}
+            >
+              <Plus className="size-4" /> New question
+            </Button>
+            <Button
+              className="rounded-full font-bold"
+              variant="secondary"
+              onClick={() => setAutoOpen(true)}
+            >
+              توليد أسئلة آليًا
+            </Button>
+          </div>
 
           {questions.map((q, i) => (
             <div key={q.id} className="glass flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
@@ -190,6 +204,156 @@ function Admin() {
             </div>
           ))}
         </TabsContent>
+
+        {/* Auto-generate dialog */}
+        <Dialog open={autoOpen} onOpenChange={(open) => setAutoOpen(open)}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl">Autogenerate Questions</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">اختر التصنيفات وعدد الأسئلة المراد توليدها بواسطة الذكاء الاصطناعي (Arabic output).</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>التصنيفات</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      { key: "دينية (مسيحية)", label: "دينية (مسيحية)" },
+                      { key: "عام", label: "عام" },
+                      { key: "ألغاز", label: "ألغاز" },
+                      { key: "رياضة", label: "رياضة" },
+                    ].map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() =>
+                          setAutoCategories((prev) =>
+                            prev.includes(c.key) ? prev.filter((x) => x !== c.key) : [...prev, c.key],
+                          )
+                        }
+                        className={`rounded-full px-4 py-2 ${autoCategories.includes(c.key) ? "bg-primary text-primary-foreground" : "bg-white/5"}`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>عدد الأسئلة</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={autoCount}
+                    onChange={(e) => setAutoCount(Number(e.target.value || 0))}
+                    className="h-11 rounded-xl bg-white/5"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="secondary" onClick={() => setAutoOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={async () => {
+                    setGenerating(true);
+                    setGenerated(null);
+                    try {
+                      const apiKey = window.prompt("OpenAI API key (will only be used in your browser)");
+                      if (!apiKey) {
+                        setGenerating(false);
+                        return;
+                      }
+                      const categories = autoCategories.length ? autoCategories : ["عام"];
+                      const total = Math.min(200, Math.max(1, autoCount || 10));
+                      const batchSize = 10;
+                      const out: Question[] = [];
+                      for (let i = 0; i < Math.ceil(total / batchSize); i++) {
+                        const want = Math.min(batchSize, total - i * batchSize);
+                        const system = `You are a helpful assistant that outputs JSON only. Generate ${want} multiple-choice quiz questions in Arabic. Each question must have: text, 4 choices, correctIndex (0-3), type (one of \"normal\",\"steal\",\"speed\",\"oral\"), points (integer), explanation (short). Use the categories: ${categories.join(", ")}. Return a JSON array.`;
+                        const body = {
+                          model: "gpt-4o-mini",
+                          messages: [
+                            { role: "system", content: system },
+                            { role: "user", content: "Just return JSON array, no extra text." },
+                          ],
+                          temperature: 0.8,
+                        };
+
+                        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${apiKey}`,
+                          },
+                          body: JSON.stringify(body),
+                        });
+                        const data = await res.json();
+                        const text = data?.choices?.[0]?.message?.content ?? JSON.stringify(data);
+                        // try extract JSON
+                        const match = text.match(/(\[[\s\S]*\])/);
+                        const jsonText = match ? match[1] : text;
+                        let parsed: any[] = [];
+                        try {
+                          parsed = JSON.parse(jsonText);
+                        } catch (err) {
+                          console.error("Failed to parse AI output", err, text);
+                          throw new Error("Failed to parse AI response");
+                        }
+
+                        for (const q of parsed) {
+                          const obj: Question = {
+                            id: crypto.randomUUID(),
+                            text: q.text ?? q.question ?? "",
+                            choices: Array.isArray(q.choices) ? q.choices.slice(0, 4).map(String) : ["", "", "", ""],
+                            correctIndex: Number.isFinite(q.correctIndex) ? q.correctIndex : 0,
+                            type: ["normal", "steal", "speed", "oral"].includes(q.type) ? q.type : "normal",
+                            points: Number(q.points) || state.settings.defaultPoints,
+                            explanation: q.explanation ?? undefined,
+                          };
+                          out.push(obj);
+                        }
+                      }
+                      setGenerated(out);
+                    } catch (e) {
+                      // error
+                      console.error(e);
+                      window.alert("فشل توليد الأسئلة — تحقق من مفتاح OpenAI أو الشبكة.");
+                    } finally {
+                      setGenerating(false);
+                    }
+                  }}
+                >
+                  {generating ? "جارٍ التوليد…" : "Generate"}
+                </Button>
+              </div>
+
+              {generated && (
+                <div className="space-y-3">
+                  <h3 className="font-bold">Preview ({generated.length})</h3>
+                  <div className="grid gap-2">
+                    {generated.slice(0, 20).map((g, i) => (
+                      <div key={g.id} className="rounded-2xl bg-white/5 p-3">
+                        <div className="font-semibold">{i + 1}. {g.text}</div>
+                        <div className="text-sm text-muted-foreground">{g.choices.join(" · ")}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="secondary" onClick={() => setGenerated(null)}>Close preview</Button>
+                    <Button onClick={() => { setQuestions([...questions, ...(generated ?? [])]); setGenerated(null); setAutoOpen(false); }}>
+                      Add to bank
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <TabsContent value="teams" className="mt-5 space-y-3">
           <Button

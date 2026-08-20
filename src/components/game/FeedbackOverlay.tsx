@@ -13,6 +13,9 @@ export function FeedbackOverlay({
   animations: boolean;
 }) {
   const team = feedback && "teamId" in feedback ? teams.find((t) => t.id === feedback.teamId) : undefined;
+  const answerer = feedback && feedback.kind === "correct" && (feedback as any).answererId && team
+    ? team.members?.find((m) => m.id === (feedback as any).answererId)
+    : undefined;
 
   useEffect(() => {
     if (animations && feedback?.kind === "correct") burstConfetti(team ? [team.color] : undefined);
@@ -34,19 +37,29 @@ export function FeedbackOverlay({
               animate={{ scale: 1, rotate: 0, opacity: 1 }}
               exit={{ scale: 1.2, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 16 }}
-              className="glass rounded-[2.5rem] px-16 py-12 text-center"
-              style={{ boxShadow: `0 0 0 2px ${team?.color ?? "var(--success)"}` }}
+              className="glass rounded-[2.5rem] px-8 py-8 text-center flex flex-col items-center gap-4"
+              style={{ boxShadow: `0 0 0 6px ${team?.color ?? "var(--success)"}` }}
             >
-              <div className="font-display text-7xl font-black text-success md:text-8xl">🎉 CORRECT!</div>
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.15 }}
-                className="mt-4 font-display text-5xl font-black"
-                style={{ color: team?.color }}
-              >
-                {team?.icon} {team?.name} +{feedback.points} POINTS
-              </motion.div>
+              <div className="font-display text-5xl font-black text-success md:text-6xl">🎉 CORRECT!</div>
+              {answerer ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="rounded-full overflow-hidden" style={{ width: 160, height: 160, boxShadow: `0 10px 40px ${team?.color ?? "#fff"}` }}>
+                    <img src={answerer.photoUrl} alt={answerer.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="font-display text-3xl font-black" style={{ color: team?.color }}>{answerer.name}</div>
+                  <div className="text-2xl font-semibold">{team?.icon} {team?.name} +{(feedback as any).points} POINTS</div>
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="mt-4 font-display text-4xl font-black"
+                  style={{ color: team?.color }}
+                >
+                  {team?.icon} {team?.name} +{feedback.points} POINTS
+                </motion.div>
+              )}
             </motion.div>
           )}
 

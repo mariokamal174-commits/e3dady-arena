@@ -19,6 +19,13 @@ export interface Team {
   color: string;
   icon: string;
   score: number;
+  members?: Member[];
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  photoUrl?: string;
 }
 
 export interface GameSettings {
@@ -44,7 +51,7 @@ export type Phase =
   | "over";
 
 export type Feedback =
-  | { kind: "correct"; points: number; teamId: string }
+  | { kind: "correct"; points: number; teamId: string; answererId?: string }
   | { kind: "wrong"; teamId: string }
   | { kind: "timeup" }
   | { kind: "steal" }
@@ -69,6 +76,7 @@ export interface HistoryEntry {
 export interface GameState {
   settings: GameSettings;
   teams: Team[];
+  lastAnswerer?: { teamId: string; memberId?: string };
   questions: Question[];
   phase: Phase;
   currentIndex: number;

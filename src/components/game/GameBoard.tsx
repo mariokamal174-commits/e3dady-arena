@@ -151,6 +151,27 @@ export function GameBoard() {
         </div>
       </header>
 
+      {/* Team members selector for active/spotlight team */}
+      {spotlightTeam && spotlightTeam.members && spotlightTeam.members.length > 0 && (
+        <div className="mt-4 flex gap-3 items-center">
+          <div className="text-sm font-bold text-muted-foreground">Players:</div>
+          <div className="flex gap-2">
+            {spotlightTeam.members.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => dispatch({ type: "SET_ANSWERER", teamId: spotlightTeam.id, memberId: m.id })}
+                className="grid size-12 place-items-center overflow-hidden rounded-full border-2"
+                style={{ backgroundImage: `url(${m.photoUrl ?? ""})`, backgroundSize: "cover", width: 48, height: 48 }}
+                aria-label={m.name}
+              >
+                {!m.photoUrl ? m.name.charAt(0) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <AnimatePresence mode="wait">
