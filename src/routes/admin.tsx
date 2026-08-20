@@ -82,9 +82,11 @@ function parseBulkQuestions(input: string, defaultPoints: number): Question[] {
           .filter((line) => /^[A-Dأبجد][).:-]\s*/i.test(line))
           .slice(0, 4)
           .map((line) => line.replace(/^[A-Dأبجد][).:-]\s*/i, "").trim());
-        const answerLine = lines.find((line) => /(?:✅|answer|الإجابة)\s*:?[\s]*[A-Dأبجد]/i.test(line));
-        const answerMatch = answerLine?.match(/[A-Dأبجد](?=\s*$)/i)?.[0].toUpperCase();
-        const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(answerMatch ?? "A");
+        const answerLine = lines.find((line) => /✅|^(answer|الإجابة)\s*:/i.test(line));
+        const answerMatch = answerLine?.match(/(?:✅|^(?:answer|الإجابة)\s*:)\s*([A-Dأبجد])/i)?.[1];
+        const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(
+          answerMatch?.toUpperCase() ?? "A",
+        );
 
         return {
           id: crypto.randomUUID(),
