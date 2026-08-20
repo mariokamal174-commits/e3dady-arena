@@ -102,6 +102,43 @@ function parseBulkQuestions(input: string, defaultPoints: number): Question[] {
       .filter((question) => question.text && question.choices.some(Boolean));
   }
 
+  const numberedBlocks: string[][] = [];
+  let currentBlock: string[] = [];
+  for (const rawLine of input.replace(/\r/g, "").split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("###")) continue;
+    if (/^\d+[.)]\s+/.test(line)) {
+      if (currentBlock.length) numberedBlocks.push(currentBlock);
+      currentBlock = [line];
+    } else if (currentBlock.length) {
+      currentBlock.push(line);
+    }
+  }
+  if (currentBlock.length) numberedBlocks.push(currentBlock);
+
+  if (numberedBlocks.length) {
+    return numberedBlocks
+      .map((lines) => {
+        const text = (lines[0] ?? "").replace(/^\d+[.)]\s+/, "").trim();
+        const choices = lines
+          .filter((line) => /^[A-Dأبجد][).:-]\s*/i.test(line))
+          .slice(0, 4)
+          .map((line) => line.replace(/^[A-Dأبجد][).:-]\s*/i, "").trim());
+        const answerLine = lines.find((line) => /^(answer|الإجابة)\s*:/i.test(line));
+        const answer = answerLine?.match(/:\s*([A-Dأبجد])/i)?.[1]?.toUpperCase() ?? "A";
+        const answerIndex = ["A", "B", "C", "D", "أ", "ب", "ج", "د"].indexOf(answer);
+        return {
+          id: crypto.randomUUID(),
+          type: "normal" as const,
+          text,
+          choices: [...choices, "", "", "", ""].slice(0, 4),
+          correctIndex: answerIndex >= 0 ? answerIndex % 4 : 0,
+          points: defaultPoints,
+        };
+      })
+      .filter((question) => question.text && question.choices.filter(Boolean).length === 4);
+  }
+
   try {
     const parsed = JSON.parse(input) as Array<Record<string, unknown>>;
     if (Array.isArray(parsed)) {
