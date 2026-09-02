@@ -322,11 +322,8 @@ export function reducer(state: GameState, action: Action): GameState {
       if (!question || question.type !== "oral") return state;
       if (action.correct) {
         const points =
-          state.phase === "steal-answer"
-            ? state.settings.stealPoints
-            : question.type === "speed"
-              ? state.settings.speedPoints
-              : state.settings.defaultPoints;
+          state.phase === "steal-answer" ? state.settings.stealPoints : state.settings.defaultPoints;
+
         return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
       }
       return afterWrong({ ...state, activeTeamId: action.teamId, running: false }, action.teamId);
