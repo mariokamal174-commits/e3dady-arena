@@ -144,17 +144,18 @@ function parseBulkQuestions(input: string, defaultPoints: number): Question[] {
     if (Array.isArray(parsed)) {
       return parsed.map((item) => ({
         id: crypto.randomUUID(),
-        type: ["normal", "steal", "speed", "oral"].includes(String(item.type))
-          ? (item.type as QuestionType)
+        type: ["normal", "steal", "speed", "oral"].includes(String(item["type"]))
+          ? (item["type"] as QuestionType)
           : "normal",
-        text: String(item.text ?? item.question ?? ""),
-        choices: Array.isArray(item.choices)
-          ? item.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
+        text: String(item["text"] ?? item["question"] ?? ""),
+        choices: Array.isArray(item["choices"])
+          ? (item["choices"] as unknown[]).slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
           : ["", "", "", ""],
-        correctIndex: typeof item.correctIndex === "number" ? item.correctIndex : 0,
-        points: typeof item.points === "number" ? item.points : defaultPoints,
-        ...(item.explanation ? { explanation: String(item.explanation) } : {}),
+        correctIndex: typeof item["correctIndex"] === "number" ? item["correctIndex"] : 0,
+        points: typeof item["points"] === "number" ? item["points"] : defaultPoints,
+        ...(item["explanation"] ? { explanation: String(item["explanation"]) } : {}),
       }));
+
     }
   } catch {
     // Fall through to the plain-text format.
