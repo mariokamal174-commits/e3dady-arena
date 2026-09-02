@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as WatchRouteImport } from './routes/watch'
+import { Route as ApiGenerateQuestionsRouteImport } from './routes/api/generate-questions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const WatchRoute = WatchRouteImport.update({
   path: '/watch',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGenerateQuestionsRoute = ApiGenerateQuestionsRouteImport.update({
+  id: '/api/generate-questions',
+  path: '/api/generate-questions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/play': typeof PlayRoute
   '/watch': typeof WatchRoute
+  '/api/generate-questions': typeof ApiGenerateQuestionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/play': typeof PlayRoute
   '/watch': typeof WatchRoute
+  '/api/generate-questions': typeof ApiGenerateQuestionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,15 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/play': typeof PlayRoute
   '/watch': typeof WatchRoute
+  '/api/generate-questions': typeof ApiGenerateQuestionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/play' | '/watch'
+  fullPaths: '/' | '/admin' | '/play' | '/watch' | '/api/generate-questions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/play' | '/watch'
-  id: '__root__' | '/' | '/admin' | '/play' | '/watch'
+  to: '/' | '/admin' | '/play' | '/watch' | '/api/generate-questions'
+  id:
+    '__root__' | '/' | '/admin' | '/play' | '/watch' | '/api/generate-questions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +77,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   PlayRoute: typeof PlayRoute
   WatchRoute: typeof WatchRoute
+  ApiGenerateQuestionsRoute: typeof ApiGenerateQuestionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-questions': {
+      id: '/api/generate-questions'
+      path: '/api/generate-questions'
+      fullPath: '/api/generate-questions'
+      preLoaderRoute: typeof ApiGenerateQuestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +125,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   PlayRoute: PlayRoute,
   WatchRoute: WatchRoute,
+  ApiGenerateQuestionsRoute: ApiGenerateQuestionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
