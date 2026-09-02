@@ -56,13 +56,14 @@ export const Route = createFileRoute("/api/generate-questions")({
           parsed = JSON.parse(text);
         } catch {
           const m = text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
-          if (m) {
+          if (m && m[1]) {
             try {
               parsed = JSON.parse(m[1]);
             } catch {
               parsed = null;
             }
           }
+
         }
         const list = Array.isArray(parsed)
           ? parsed
