@@ -420,8 +420,9 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         teams: archive.teams.map((team) => ({
           ...team,
-          members: team.members?.map((member) => ({ ...member })),
+          ...(team.members ? { members: team.members.map((member) => ({ ...member })) } : {}),
         })),
+
         scoreBumps: {},
       };
     }
