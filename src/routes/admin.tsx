@@ -200,6 +200,9 @@ function Admin() {
   const [autoCount, setAutoCount] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<Question[] | null>(null);
+  const [withImages, setWithImages] = useState(false);
+  const [genStatus, setGenStatus] = useState<string | null>(null);
+
   const [uploading, setUploading] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
