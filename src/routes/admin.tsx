@@ -395,75 +395,106 @@ function Admin() {
                 </div>
               </div>
 
-              <div className="flex gap-2 justify-end">
+              <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={withImages}
+                  onChange={(e) => setWithImages(e.target.checked)}
+                />
+                ولّد صورة توضيحية لكل سؤال بالذكاء الاصطناعي (أبطأ)
+              </label>
+
+              <div className="flex items-center justify-end gap-2">
+                {genStatus ? <span className="text-sm text-muted-foreground">{genStatus}</span> : null}
                 <Button variant="secondary" onClick={() => setAutoOpen(false)}>
                   إلغاء
                 </Button>
                 <Button
+                  disabled={generating}
                   onClick={async () => {
                     setGenerating(true);
                     setGenerated(null);
+                    setGenStatus("جارٍ توليد الأسئلة…");
                     try {
-                      const apiKey = window.prompt("OpenAI API key (will only be used in your browser)");
-                      if (!apiKey) {
-                        setGenerating(false);
-                        return;
-                      }
                       const categories = autoCategories.length ? autoCategories : ["عام"];
-                      const total = Math.min(200, Math.max(1, autoCount || 10));
+                      const total = Math.min(60, Math.max(1, autoCount || 10));
                       const batchSize = 10;
                       const out: Question[] = [];
+
                       for (let i = 0; i < Math.ceil(total / batchSize); i++) {
                         const want = Math.min(batchSize, total - i * batchSize);
-                        const system = `You are a helpful assistant that outputs JSON only. Generate ${want} multiple-choice quiz questions in Arabic. Each question must have: text, 4 choices, correctIndex (0-3), type (one of \"normal\",\"steal\",\"speed\",\"oral\"), points (integer), explanation (short). Use the categories: ${categories.join(", ")}. Return a JSON array.`;
-                        const body = {
-                          model: "gpt-4o-mini",
-                          messages: [
-                            { role: "system", content: system },
-                            { role: "user", content: "Just return JSON array, no extra text." },
-                          ],
-                          temperature: 0.8,
-                        };
-
-                        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                        setGenStatus(`جارٍ توليد الأسئلة… (${out.length}/${total})`);
+                        const res = await fetch("/api/generate-questions", {
                           method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${apiKey}`,
-                          },
-                          body: JSON.stringify(body),
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            count: want,
+                            categories,
+                            withImages,
+                            defaultPoints: state.settings.defaultPoints,
+                          }),
                         });
-                        const data = await res.json();
-                        const text = data?.choices?.[0]?.message?.content ?? JSON.stringify(data);
-                        // try extract JSON
-                        const match = text.match(/(\[[\s\S]*\])/);
-                        const jsonText = match ? match[1] : text;
-                        let parsed: any[] = [];
-                        try {
-                          parsed = JSON.parse(jsonText);
-                        } catch (err) {
-                          console.error("Failed to parse AI output", err, text);
-                          throw new Error("Failed to parse AI response");
+                        if (!res.ok) {
+                          const msg = await res.text();
+                          throw new Error(msg || `HTTP ${res.status}`);
                         }
-
-                        for (const q of parsed) {
-                          const obj: Question = {
+                        const data = (await res.json()) as { questions: any[] };
+                        for (const q of data.questions ?? []) {
+                          out.push({
                             id: crypto.randomUUID(),
-                            text: q.text ?? q.question ?? "",
-                            choices: Array.isArray(q.choices) ? q.choices.slice(0, 4).map(String) : ["", "", "", ""],
-                            correctIndex: Number.isFinite(q.correctIndex) ? q.correctIndex : 0,
-                            type: ["normal", "steal", "speed", "oral"].includes(q.type) ? q.type : "normal",
+                            text: String(q.text ?? q.question ?? ""),
+                            choices: Array.isArray(q.choices)
+                              ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
+                              : ["", "", "", ""],
+                            correctIndex: Number.isFinite(q.correctIndex) ? Number(q.correctIndex) : 0,
+                            type: ["normal", "steal", "speed", "oral"].includes(q.type)
+                              ? q.type
+                              : "normal",
                             points: Number(q.points) || state.settings.defaultPoints,
-                            explanation: q.explanation ?? undefined,
-                          };
-                          out.push(obj);
+                            ...(q.explanation ? { explanation: String(q.explanation) } : {}),
+                            ...(withImages && q.imagePrompt ? { imagePrompt: String(q.imagePrompt) } : {}),
+                          } as Question & { imagePrompt?: string });
                         }
                       }
+
+                      if (withImages) {
+                        for (let i = 0; i < out.length; i++) {
+                          const q = out[i] as Question & { imagePrompt?: string };
+                          const prompt = q.imagePrompt || q.text;
+                          if (!prompt) continue;
+                          setGenStatus(`جارٍ توليد الصور… (${i + 1}/${out.length})`);
+                          try {
+                            const res = await fetch("/api/generate-image", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ prompt }),
+                            });
+                            if (!res.ok) continue;
+                            const { b64 } = (await res.json()) as { b64: string };
+                            const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+                            const path = `ai/${crypto.randomUUID()}.png`;
+                            const { error } = await supabase.storage
+                              .from("question-images")
+                              .upload(path, bytes, { contentType: "image/png", upsert: false });
+                            if (error) continue;
+                            const { data: signed } = await supabase.storage
+                              .from("question-images")
+                              .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+                            if (signed?.signedUrl) q.imageUrl = signed.signedUrl;
+                          } catch (err) {
+                            console.error("image gen failed", err);
+                          }
+                          delete q.imagePrompt;
+                        }
+                      }
+
                       setGenerated(out);
+                      setGenStatus(null);
                     } catch (e) {
-                      // error
                       console.error(e);
-                      window.alert("فشل توليد الأسئلة — تحقق من مفتاح OpenAI أو الشبكة.");
+                      setGenStatus(null);
+                      toast.error("فشل توليد الأسئلة — حاول تاني.");
                     } finally {
                       setGenerating(false);
                     }
@@ -472,6 +503,7 @@ function Admin() {
                   {generating ? "جارٍ التوليد…" : "Generate"}
                 </Button>
               </div>
+
 
               {generated && (
                 <div className="space-y-3">
