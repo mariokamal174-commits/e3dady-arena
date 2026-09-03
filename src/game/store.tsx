@@ -12,7 +12,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
 import { playSound, setSoundEnabled, setVolume, unlockAudio } from "./audio";
-import type { GameSettings, GameState, LifelineKind, Question, ScoreArchive, Team } from "./types";
+import type {
+  GameSettings,
+  GameState,
+  LifelineKind,
+  Question,
+  QuestionArchive,
+  ScoreArchive,
+  Team,
+} from "./types";
 
 const STORAGE_KEY = "quiz-arena-state-v1";
 
@@ -430,6 +438,31 @@ export function reducer(state: GameState, action: Action): GameState {
         scoreBumps: {},
       };
     }
+    case "ARCHIVE_QUESTIONS": {
+      if (!state.questions.length) return state;
+      const archive: QuestionArchive = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        questions: state.questions.map((q) => ({ ...q, choices: [...q.choices] })),
+      };
+      return {
+        ...state,
+        questionArchives: [archive, ...(state.questionArchives ?? [])].slice(0, 20),
+      };
+    }
+    case "RESTORE_QUESTION_ARCHIVE": {
+      const archive = (state.questionArchives ?? []).find((item) => item.id === action.archiveId);
+      if (!archive) return state;
+      return {
+        ...state,
+        questions: archive.questions.map((q) => ({ ...q, choices: [...q.choices] })),
+      };
+    }
+    case "DELETE_QUESTION_ARCHIVE":
+      return {
+        ...state,
+        questionArchives: (state.questionArchives ?? []).filter((item) => item.id !== action.archiveId),
+      };
     case "END_GAME":
       return { ...state, phase: "over", running: false, feedback: null };
     case "BACK_TO_SETUP":
@@ -556,6 +589,7 @@ function loadPersisted(pathname = "/"): GameState | null {
         lifelinesUsed: {},
         lifelineNotice: null,
         scoreArchives: parsed.scoreArchives ?? [],
+        questionArchives: parsed.questionArchives ?? [],
       };
     }
 
