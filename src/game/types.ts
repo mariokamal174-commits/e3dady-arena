@@ -78,6 +78,12 @@ export interface HistoryEntry {
   points: number;
 }
 
+export interface QuestionArchive {
+  id: string;
+  createdAt: string;
+  questions: Question[];
+}
+
 export interface ScoreArchive {
   id: string;
   createdAt: string;
@@ -109,4 +115,5 @@ export interface GameState {
   lifelinesUsed: Record<string, LifelineKind[]>;
   lifelineNotice: string | null;
   scoreArchives: ScoreArchive[];
+  questionArchives: QuestionArchive[];
 }
