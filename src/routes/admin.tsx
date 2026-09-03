@@ -307,6 +307,21 @@ function Admin() {
             >
               <Archive className="size-4" /> أرشفة الأسئلة
             </Button>
+            <Button
+              className="rounded-full font-bold"
+              variant="destructive"
+              onClick={() => {
+                if (!questions.length) {
+                  toast.error("لا توجد أسئلة لمسحها");
+                  return;
+                }
+                if (!window.confirm(`مسح كل الأسئلة (${questions.length})؟ الأرشيف مش هيتمسح.`)) return;
+                setQuestions([]);
+                toast.success("تم مسح كل الأسئلة");
+              }}
+            >
+              <Trash2 className="size-4" /> مسح الكل
+            </Button>
           </div>
 
           {(state.questionArchives?.length ?? 0) > 0 && (
