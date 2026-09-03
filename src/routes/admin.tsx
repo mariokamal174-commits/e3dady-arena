@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ClipboardPaste, Copy, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  ClipboardPaste,
+  Copy,
+  ImagePlus,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -282,7 +293,60 @@ function Admin() {
             <Button className="rounded-full font-bold" variant="secondary" onClick={() => setPasteOpen(true)}>
               <ClipboardPaste className="size-4" /> Paste questions
             </Button>
+            <Button
+              className="rounded-full font-bold"
+              variant="secondary"
+              onClick={() => {
+                if (!questions.length) {
+                  toast.error("لا توجد أسئلة لأرشفتها");
+                  return;
+                }
+                dispatch({ type: "ARCHIVE_QUESTIONS" });
+                toast.success(`تم أرشفة ${questions.length} سؤال`);
+              }}
+            >
+              <Archive className="size-4" /> أرشفة الأسئلة
+            </Button>
           </div>
+
+          {(state.questionArchives?.length ?? 0) > 0 && (
+            <div className="glass rounded-2xl p-4">
+              <p className="mb-2 text-xs font-bold tracking-[0.2em] text-muted-foreground">
+                أرشيف الأسئلة ({state.questionArchives.length})
+              </p>
+              <div className="grid gap-2">
+                {state.questionArchives.map((archive) => (
+                  <div key={archive.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
+                    <span className="flex-1 text-sm font-semibold">
+                      {new Date(archive.createdAt).toLocaleString("ar-EG", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}{" "}
+                      · {archive.questions.length} سؤال
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1"
+                      onClick={() => {
+                        dispatch({ type: "RESTORE_QUESTION_ARCHIVE", archiveId: archive.id });
+                        toast.success("تم استرجاع الأسئلة من الأرشيف");
+                      }}
+                    >
+                      <ArchiveRestore className="size-4" /> استرجاع
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => dispatch({ type: "DELETE_QUESTION_ARCHIVE", archiveId: archive.id })}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {questions.map((q, i) => (
             <div key={q.id} className="glass flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
