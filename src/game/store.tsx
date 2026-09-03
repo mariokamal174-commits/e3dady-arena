@@ -40,6 +40,7 @@ export const initialState: GameState = {
   lifelinesUsed: {},
   lifelineNotice: null,
   scoreArchives: [],
+  questionArchives: [],
 };
 
 export type Action =
@@ -69,6 +70,9 @@ export type Action =
   | { type: "ADJUST"; teamId: string; delta: number }
   | { type: "RESET_SCORES" }
   | { type: "ARCHIVE_SCORES" }
+  | { type: "ARCHIVE_QUESTIONS" }
+  | { type: "RESTORE_QUESTION_ARCHIVE"; archiveId: string }
+  | { type: "DELETE_QUESTION_ARCHIVE"; archiveId: string }
   | { type: "RESTORE_SCORES"; archiveId: string }
   | { type: "END_GAME" }
   | { type: "BACK_TO_SETUP" }
