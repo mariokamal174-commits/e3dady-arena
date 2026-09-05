@@ -479,6 +479,33 @@ function Admin() {
                 </div>
               </div>
 
+              <div>
+                <Label>أنواع الأسئلة</Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {([
+                    { key: "normal", label: "عادي" },
+                    { key: "steal", label: "سرقة" },
+                    { key: "speed", label: "سرعة" },
+                    { key: "oral", label: "شفوي" },
+                  ] as { key: Question["type"]; label: string }[]).map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() =>
+                        setAutoTypes((prev) =>
+                          prev.includes(t.key)
+                            ? prev.filter((x) => x !== t.key)
+                            : [...prev, t.key],
+                        )
+                      }
+                      className={`rounded-full px-4 py-2 ${autoTypes.includes(t.key) ? "bg-primary text-primary-foreground" : "bg-white/5"}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-sm font-semibold">
                 <input
                   type="checkbox"
@@ -488,6 +515,7 @@ function Admin() {
                 />
                 ولّد صورة توضيحية لكل سؤال بالذكاء الاصطناعي (أبطأ)
               </label>
+
 
               <div className="flex items-center justify-end gap-2">
                 {genStatus ? <span className="text-sm text-muted-foreground">{genStatus}</span> : null}
