@@ -212,6 +212,8 @@ function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<Question[] | null>(null);
   const [withImages, setWithImages] = useState(false);
+  const [autoTypes, setAutoTypes] = useState<Question["type"][]>(["normal"]);
+
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
