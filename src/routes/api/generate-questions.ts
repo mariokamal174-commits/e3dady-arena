@@ -5,20 +5,33 @@ type Body = {
   categories?: string[];
   withImages?: boolean;
   defaultPoints?: number;
+  types?: string[];
+  avoid?: string[];
 };
 
 export const Route = createFileRoute("/api/generate-questions")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { count = 10, categories = [], withImages = false, defaultPoints = 20 } =
-          (await request.json()) as Body;
+        const {
+          count = 10,
+          categories = [],
+          withImages = false,
+          defaultPoints = 20,
+          types = [],
+          avoid = [],
+        } = (await request.json()) as Body;
 
         const key = process.env["LOVABLE_API_KEY"];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const want = Math.min(20, Math.max(1, Math.floor(count)));
         const cats = categories.length ? categories.join("، ") : "معلومات عامة";
+        const allowed = (types.length ? types : ["normal"]).filter((t) =>
+          ["normal", "steal", "speed", "oral"].includes(t),
+        );
+        const allowedTypes = allowed.length ? allowed : ["normal"];
+        const avoidList = avoid.slice(-120);
 
         const system = [
           "أنت مولّد أسئلة مسابقات باللغة العربية. أخرج JSON فقط بدون أي شرح.",
@@ -26,8 +39,16 @@ export const Route = createFileRoute("/api/generate-questions")({
           "الصيغة: مصفوفة JSON، كل عنصر: {\"text\":string, \"choices\":[4 نصوص], \"correctIndex\":0-3, \"type\":\"normal\"|\"steal\"|\"speed\"|\"oral\", \"points\":number, \"explanation\":string" +
             (withImages ? ", \"imagePrompt\": وصف إنجليزي قصير لصورة توضيحية مناسبة للسؤال" : "") +
             "}",
-          `اجعل points = ${defaultPoints} افتراضياً. لا تكرر الأسئلة.`,
-        ].join("\n");
+          `القيم المسموحة للحقل type فقط: ${allowedTypes.join(" | ")}. وزّعها بالتساوي قدر الإمكان.`,
+          `اجعل points = ${defaultPoints} افتراضياً. لا تكرر الأسئلة إطلاقاً، واجعل كل سؤال مختلف تماماً في الموضوع والصياغة.`,
+          avoidList.length
+            ? `ممنوع تماماً توليد أي سؤال مطابق أو مشابه لهذه الأسئلة:\n- ${avoidList.join("\n- ")}`
+            : "",
+          `تنويع إجباري: استخدم بذرة عشوائية ${Math.random().toString(36).slice(2)} لاختيار مواضيع فرعية مختلفة.`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
 
         const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",

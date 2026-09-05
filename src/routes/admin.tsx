@@ -212,6 +212,8 @@ function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<Question[] | null>(null);
   const [withImages, setWithImages] = useState(false);
+  const [autoTypes, setAutoTypes] = useState<Question["type"][]>(["normal"]);
+
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
@@ -477,6 +479,33 @@ function Admin() {
                 </div>
               </div>
 
+              <div>
+                <Label>أنواع الأسئلة</Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {([
+                    { key: "normal", label: "عادي" },
+                    { key: "steal", label: "سرقة" },
+                    { key: "speed", label: "سرعة" },
+                    { key: "oral", label: "شفوي" },
+                  ] as { key: Question["type"]; label: string }[]).map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() =>
+                        setAutoTypes((prev) =>
+                          prev.includes(t.key)
+                            ? prev.filter((x) => x !== t.key)
+                            : [...prev, t.key],
+                        )
+                      }
+                      className={`rounded-full px-4 py-2 ${autoTypes.includes(t.key) ? "bg-primary text-primary-foreground" : "bg-white/5"}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-sm font-semibold">
                 <input
                   type="checkbox"
@@ -486,6 +515,7 @@ function Admin() {
                 />
                 ولّد صورة توضيحية لكل سؤال بالذكاء الاصطناعي (أبطأ)
               </label>
+
 
               <div className="flex items-center justify-end gap-2">
                 {genStatus ? <span className="text-sm text-muted-foreground">{genStatus}</span> : null}
@@ -503,9 +533,25 @@ function Admin() {
                       const total = Math.min(60, Math.max(1, autoCount || 10));
                       const batchSize = 10;
                       const out: Question[] = [];
+                      const types = autoTypes.length ? autoTypes : (["normal"] as Question["type"][]);
 
-                      for (let i = 0; i < Math.ceil(total / batchSize); i++) {
-                        const want = Math.min(batchSize, total - i * batchSize);
+                      const norm = (s: string) =>
+                        s
+                          .replace(/[\u064B-\u0652\u0640]/g, "")
+                          .replace(/[أإآ]/g, "ا")
+                          .replace(/ة/g, "ه")
+                          .replace(/ى/g, "ي")
+                          .replace(/[^\p{L}\p{N}]+/gu, " ")
+                          .trim()
+                          .toLowerCase();
+
+                      const seen = new Set<string>(questions.map((q) => norm(q.text)));
+                      const avoid: string[] = questions.map((q) => q.text);
+
+                      let guard = 0;
+                      while (out.length < total && guard < Math.ceil(total / batchSize) + 4) {
+                        guard++;
+                        const want = Math.min(batchSize, total - out.length);
                         setGenStatus(`جارٍ توليد الأسئلة… (${out.length}/${total})`);
                         const res = await fetch("/api/generate-questions", {
                           method: "POST",
@@ -515,6 +561,8 @@ function Admin() {
                             categories,
                             withImages,
                             defaultPoints: state.settings.defaultPoints,
+                            types,
+                            avoid,
                           }),
                         });
                         if (!res.ok) {
@@ -523,22 +571,30 @@ function Admin() {
                         }
                         const data = (await res.json()) as { questions: any[] };
                         for (const q of data.questions ?? []) {
+                          if (out.length >= total) break;
+                          const text = String(q.text ?? q.question ?? "").trim();
+                          if (!text) continue;
+                          const keyText = norm(text);
+                          if (seen.has(keyText)) continue;
+                          seen.add(keyText);
+                          avoid.push(text);
+                          const rawType = String(q.type) as Question["type"];
                           out.push({
                             id: crypto.randomUUID(),
-                            text: String(q.text ?? q.question ?? ""),
+                            text,
                             choices: Array.isArray(q.choices)
                               ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
                               : ["", "", "", ""],
                             correctIndex: Number.isFinite(q.correctIndex) ? Number(q.correctIndex) : 0,
-                            type: ["normal", "steal", "speed", "oral"].includes(q.type)
-                              ? q.type
-                              : "normal",
+                            type: types.includes(rawType) ? rawType : (types[out.length % types.length] as Question["type"]),
                             points: Number(q.points) || state.settings.defaultPoints,
                             ...(q.explanation ? { explanation: String(q.explanation) } : {}),
                             ...(withImages && q.imagePrompt ? { imagePrompt: String(q.imagePrompt) } : {}),
                           } as Question & { imagePrompt?: string });
                         }
                       }
+
+
 
                       if (withImages) {
                         for (let i = 0; i < out.length; i++) {
