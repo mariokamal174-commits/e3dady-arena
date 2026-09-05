@@ -5,9 +5,23 @@ type Body = {
   categories?: string[];
   withImages?: boolean;
   defaultPoints?: number;
-  types?: string[];
+  /** Map of how many questions to generate for each type. */
+  distribution?: Record<string, number>;
   avoid?: string[];
 };
+
+const VALID_TYPES = ["normal", "steal", "speed", "oral"] as const;
+
+type QuestionType = (typeof VALID_TYPES)[number];
+
+function buildSchema(type: QuestionType, withImages: boolean): string {
+  const base = `{"text":string, "type":"${type}", "points":number, "explanation":string`;
+  const image = withImages ? ", \"imagePrompt\": وصف إنجليزي قصير لصورة توضيحية مناسبة للسؤال" : "";
+  if (type === "oral") {
+    return `${base}, "answer":string${image}}`;
+  }
+  return `${base}, "choices":[4 نصوص], "correctIndex":0-3${image}}`;
+}
 
 export const Route = createFileRoute("/api/generate-questions")({
   server: {
@@ -18,37 +32,65 @@ export const Route = createFileRoute("/api/generate-questions")({
           categories = [],
           withImages = false,
           defaultPoints = 20,
-          types = [],
+          distribution = {},
           avoid = [],
         } = (await request.json()) as Body;
 
         const key = process.env["LOVABLE_API_KEY"];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
-        const want = Math.min(20, Math.max(1, Math.floor(count)));
         const cats = categories.length ? categories.join("، ") : "معلومات عامة";
-        const allowed = (types.length ? types : ["normal"]).filter((t) =>
-          ["normal", "steal", "speed", "oral"].includes(t),
-        );
-        const allowedTypes = allowed.length ? allowed : ["normal"];
         const avoidList = avoid.slice(-120);
 
-        const system = [
+        // Build explicit distribution. If none provided, fall back to all normal.
+        const requestedTotal = Math.min(60, Math.max(1, Math.floor(count)));
+        const normalizedDist: Record<QuestionType, number> = {
+          normal: 0,
+          steal: 0,
+          speed: 0,
+          oral: 0,
+        };
+
+        let distSum = 0;
+        for (const [type, n] of Object.entries(distribution)) {
+          if (VALID_TYPES.includes(type as QuestionType) && typeof n === "number" && n > 0) {
+            normalizedDist[type as QuestionType] = Math.max(0, Math.floor(n));
+            distSum += normalizedDist[type as QuestionType];
+          }
+        }
+
+        // If distribution is empty or doesn't sum to anything, make everything normal.
+        if (distSum === 0) {
+          normalizedDist.normal = requestedTotal;
+          distSum = requestedTotal;
+        }
+
+        // Clamp to requested total by trimming the largest bucket(s).
+        while (distSum > requestedTotal) {
+          const largest = (Object.keys(normalizedDist) as QuestionType[]).reduce((a, b) =>
+            normalizedDist[a] >= normalizedDist[b] ? a : b,
+          );
+          normalizedDist[largest]--;
+          distSum--;
+        }
+
+        const typeEntries = (Object.entries(normalizedDist) as [QuestionType, number][]).filter(
+          ([, n]) => n > 0,
+        );
+
+        const systemParts = [
           "أنت مولّد أسئلة مسابقات باللغة العربية. أخرج JSON فقط بدون أي شرح.",
-          `ولّد ${want} سؤال اختيار من متعدد عن: ${cats}.`,
-          "الصيغة: مصفوفة JSON، كل عنصر: {\"text\":string, \"choices\":[4 نصوص], \"correctIndex\":0-3, \"type\":\"normal\"|\"steal\"|\"speed\"|\"oral\", \"points\":number, \"explanation\":string" +
-            (withImages ? ", \"imagePrompt\": وصف إنجليزي قصير لصورة توضيحية مناسبة للسؤال" : "") +
-            "}",
-          `القيم المسموحة للحقل type فقط: ${allowedTypes.join(" | ")}. وزّعها بالتساوي قدر الإمكان.`,
+          `ولّد ${requestedTotal} سؤال اختيار من متعدد أو سؤال شفوي عن: ${cats}.`,
+          "الصيغة: مصفوفة JSON، كل عنصر حسب نوعه:",
+          ...typeEntries.map(([type, n]) => `- ${n} سؤال من نوع "${type}": ${buildSchema(type, withImages)}`),
           `اجعل points = ${defaultPoints} افتراضياً. لا تكرر الأسئلة إطلاقاً، واجعل كل سؤال مختلف تماماً في الموضوع والصياغة.`,
           avoidList.length
             ? `ممنوع تماماً توليد أي سؤال مطابق أو مشابه لهذه الأسئلة:\n- ${avoidList.join("\n- ")}`
             : "",
           `تنويع إجباري: استخدم بذرة عشوائية ${Math.random().toString(36).slice(2)} لاختيار مواضيع فرعية مختلفة.`,
-        ]
-          .filter(Boolean)
-          .join("\n");
+        ];
 
+        const system = systemParts.filter(Boolean).join("\n");
 
         const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -84,8 +126,8 @@ export const Route = createFileRoute("/api/generate-questions")({
               parsed = null;
             }
           }
-
         }
+
         const list = Array.isArray(parsed)
           ? parsed
           : Array.isArray(parsed?.questions)
@@ -101,7 +143,7 @@ export const Route = createFileRoute("/api/generate-questions")({
           });
         }
 
-        return new Response(JSON.stringify({ questions: list }), {
+        return new Response(JSON.stringify({ questions: list, distribution: normalizedDist }), {
           headers: { "Content-Type": "application/json" },
         });
       },
