@@ -332,14 +332,28 @@ function GameSetup() {
               <h2 className="font-display text-2xl font-black">Score archive</h2>
               <p className="mt-1 text-sm text-muted-foreground">Save finished scores and restore them whenever you need.</p>
             </div>
-            <Button
-              variant="secondary"
-              className="rounded-full"
-              disabled={!teams.some((team) => team.score !== 0)}
-              onClick={() => dispatch({ type: "ARCHIVE_SCORES" })}
-            >
-              <Archive className="size-4" /> Archive current scores
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                className="rounded-full"
+                disabled={!teams.some((team) => team.score !== 0)}
+                onClick={() => {
+                  if (window.confirm("هل أنت متأكد أنك تريد تصفير درجات كل الفرق؟")) {
+                    dispatch({ type: "RESET_SCORES" });
+                  }
+                }}
+              >
+                <RotateCcw className="size-4" /> Reset scores
+              </Button>
+              <Button
+                variant="secondary"
+                className="rounded-full"
+                disabled={!teams.some((team) => team.score !== 0)}
+                onClick={() => dispatch({ type: "ARCHIVE_SCORES" })}
+              >
+                <Archive className="size-4" /> Archive current scores
+              </Button>
+            </div>
           </div>
           {state.scoreArchives.length > 0 ? (
             <div className="mt-4 grid gap-2">
