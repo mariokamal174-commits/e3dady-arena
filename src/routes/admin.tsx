@@ -553,6 +553,12 @@ function Admin() {
                         guard++;
                         const want = Math.min(batchSize, total - out.length);
                         setGenStatus(`جارٍ توليد الأسئلة… (${out.length}/${total})`);
+                        // Distribute this batch evenly across the selected types.
+                        const distribution: Record<string, number> = {};
+                        for (let i = 0; i < want; i++) {
+                          const t = types[(out.length + i) % types.length]!;
+                          distribution[t] = (distribution[t] ?? 0) + 1;
+                        }
                         const res = await fetch("/api/generate-questions", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -561,7 +567,7 @@ function Admin() {
                             categories,
                             withImages,
                             defaultPoints: state.settings.defaultPoints,
-                            types,
+                            distribution,
                             avoid,
                           }),
                         });
