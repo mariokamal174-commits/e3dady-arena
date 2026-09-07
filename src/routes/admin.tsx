@@ -668,8 +668,17 @@ function Admin() {
                   <div className="grid gap-2">
                     {generated.slice(0, 20).map((g, i) => (
                       <div key={g.id} className="rounded-2xl bg-white/5 p-3">
-                        <div className="font-semibold">{i + 1}. {g.text}</div>
-                        <div className="text-sm text-muted-foreground">{g.choices.join(" · ")}</div>
+                        <div className="font-semibold">
+                          {i + 1}. {g.text}{" "}
+                          <span className="text-xs font-bold text-primary">
+                            ({TYPES.find((t) => t.value === g.type)?.label ?? g.type})
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {g.type === "oral"
+                            ? (g.explanation || "سؤال شفوي")
+                            : g.choices.join(" · ")}
+                        </div>
                       </div>
                     ))}
                   </div>
