@@ -585,16 +585,29 @@ function Admin() {
                           seen.add(keyText);
                           avoid.push(text);
                           const rawType = String(q.type) as Question["type"];
+                          const finalType: Question["type"] = types.includes(rawType)
+                            ? rawType
+                            : (types[out.length % types.length] as Question["type"]);
+                          const oralAnswer = finalType === "oral" ? String(q.answer ?? "").trim() : "";
+                          const explanationParts = [
+                            q.explanation ? String(q.explanation) : "",
+                            oralAnswer ? `الإجابة: ${oralAnswer}` : "",
+                          ].filter(Boolean);
                           out.push({
                             id: crypto.randomUUID(),
                             text,
-                            choices: Array.isArray(q.choices)
-                              ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
-                              : ["", "", "", ""],
+                            choices:
+                              finalType === "oral"
+                                ? []
+                                : Array.isArray(q.choices)
+                                  ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
+                                  : ["", "", "", ""],
                             correctIndex: Number.isFinite(q.correctIndex) ? Number(q.correctIndex) : 0,
-                            type: types.includes(rawType) ? rawType : (types[out.length % types.length] as Question["type"]),
+                            type: finalType,
                             points: Number(q.points) || state.settings.defaultPoints,
-                            ...(q.explanation ? { explanation: String(q.explanation) } : {}),
+                            ...(explanationParts.length
+                              ? { explanation: explanationParts.join(" — ") }
+                              : {}),
                             ...(withImages && q.imagePrompt ? { imagePrompt: String(q.imagePrompt) } : {}),
                           } as Question & { imagePrompt?: string });
                         }
