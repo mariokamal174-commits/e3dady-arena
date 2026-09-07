@@ -553,6 +553,12 @@ function Admin() {
                         guard++;
                         const want = Math.min(batchSize, total - out.length);
                         setGenStatus(`جارٍ توليد الأسئلة… (${out.length}/${total})`);
+                        // Distribute this batch evenly across the selected types.
+                        const distribution: Record<string, number> = {};
+                        for (let i = 0; i < want; i++) {
+                          const t = types[(out.length + i) % types.length]!;
+                          distribution[t] = (distribution[t] ?? 0) + 1;
+                        }
                         const res = await fetch("/api/generate-questions", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -561,7 +567,7 @@ function Admin() {
                             categories,
                             withImages,
                             defaultPoints: state.settings.defaultPoints,
-                            types,
+                            distribution,
                             avoid,
                           }),
                         });
@@ -579,16 +585,29 @@ function Admin() {
                           seen.add(keyText);
                           avoid.push(text);
                           const rawType = String(q.type) as Question["type"];
+                          const finalType: Question["type"] = types.includes(rawType)
+                            ? rawType
+                            : (types[out.length % types.length] as Question["type"]);
+                          const oralAnswer = finalType === "oral" ? String(q.answer ?? "").trim() : "";
+                          const explanationParts = [
+                            q.explanation ? String(q.explanation) : "",
+                            oralAnswer ? `الإجابة: ${oralAnswer}` : "",
+                          ].filter(Boolean);
                           out.push({
                             id: crypto.randomUUID(),
                             text,
-                            choices: Array.isArray(q.choices)
-                              ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
-                              : ["", "", "", ""],
+                            choices:
+                              finalType === "oral"
+                                ? []
+                                : Array.isArray(q.choices)
+                                  ? q.choices.slice(0, 4).map(String).concat(["", "", "", ""]).slice(0, 4)
+                                  : ["", "", "", ""],
                             correctIndex: Number.isFinite(q.correctIndex) ? Number(q.correctIndex) : 0,
-                            type: types.includes(rawType) ? rawType : (types[out.length % types.length] as Question["type"]),
+                            type: finalType,
                             points: Number(q.points) || state.settings.defaultPoints,
-                            ...(q.explanation ? { explanation: String(q.explanation) } : {}),
+                            ...(explanationParts.length
+                              ? { explanation: explanationParts.join(" — ") }
+                              : {}),
                             ...(withImages && q.imagePrompt ? { imagePrompt: String(q.imagePrompt) } : {}),
                           } as Question & { imagePrompt?: string });
                         }
@@ -649,8 +668,17 @@ function Admin() {
                   <div className="grid gap-2">
                     {generated.slice(0, 20).map((g, i) => (
                       <div key={g.id} className="rounded-2xl bg-white/5 p-3">
-                        <div className="font-semibold">{i + 1}. {g.text}</div>
-                        <div className="text-sm text-muted-foreground">{g.choices.join(" · ")}</div>
+                        <div className="font-semibold">
+                          {i + 1}. {g.text}{" "}
+                          <span className="text-xs font-bold text-primary">
+                            ({TYPES.find((t) => t.value === g.type)?.label ?? g.type})
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {g.type === "oral"
+                            ? (g.explanation || "سؤال شفوي")
+                            : g.choices.join(" · ")}
+                        </div>
                       </div>
                     ))}
                   </div>
