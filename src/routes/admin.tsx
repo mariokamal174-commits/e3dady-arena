@@ -208,6 +208,7 @@ function Admin() {
   const [preview, setPreview] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoCategories, setAutoCategories] = useState<string[]>([]);
+  const [autoCustomTopic, setAutoCustomTopic] = useState("");
   const [autoCount, setAutoCount] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<Question[] | null>(null);
@@ -480,6 +481,18 @@ function Admin() {
                       </button>
                     ))}
                   </div>
+                  <div className="mt-3">
+                    <Label>أو اكتب موضوعك الخاص</Label>
+                    <Input
+                      value={autoCustomTopic}
+                      onChange={(e) => setAutoCustomTopic(e.target.value)}
+                      placeholder="مثال: أبو كير وتاريخها، حروب أكتوبر، أغاني عمرو دياب…"
+                      className="mt-2 h-11 rounded-xl bg-white/5"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      اكتب أي موضوع حر وسيتولّد عنه الأسئلة حتى لو مش من القائمة.
+                    </p>
+                  </div>
                 </div>
 
                 <div>
@@ -545,7 +558,9 @@ function Admin() {
                     setGenerated(null);
                     setGenStatus("جارٍ توليد الأسئلة…");
                     try {
-                      const categories = autoCategories.length ? autoCategories : ["عام"];
+                      const custom = autoCustomTopic.trim();
+                      const categories = [...autoCategories, ...(custom ? [custom] : [])];
+                      if (!categories.length) categories.push("عام");
                       const total = Math.min(60, Math.max(1, autoCount || 10));
                       const batchSize = 10;
                       const out: Question[] = [];
