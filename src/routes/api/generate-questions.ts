@@ -8,6 +8,8 @@ type Body = {
   /** Map of how many questions to generate for each type. */
   distribution?: Record<string, number>;
   avoid?: string[];
+  /** Raw text extracted from an uploaded document (PDF/TXT) to base questions on. */
+  sourceText?: string;
 };
 
 const VALID_TYPES = ["normal", "steal", "speed", "oral"] as const;
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/api/generate-questions")({
           defaultPoints = 20,
           distribution = {},
           avoid = [],
+          sourceText = "",
         } = (await request.json()) as Body;
 
         const key = process.env["LOVABLE_API_KEY"];
@@ -78,10 +81,15 @@ export const Route = createFileRoute("/api/generate-questions")({
           ([, n]) => n > 0,
         );
 
+        const source = String(sourceText || "").slice(0, 20000).trim();
+
         const systemParts = [
           "أنت مولّد أسئلة مسابقات باللغة العربية. أخرج JSON فقط بدون أي شرح.",
-          `ولّد ${requestedTotal} سؤال اختيار من متعدد أو سؤال شفوي عن: ${cats}.`,
+          source
+            ? `ولّد ${requestedTotal} سؤالاً معتمداً حصرياً على النص المرفق التالي، ولا تستخدم أي معلومة من خارجه:\n"""\n${source}\n"""`
+            : `ولّد ${requestedTotal} سؤال اختيار من متعدد أو سؤال شفوي عن: ${cats}.`,
           "مستوى الصعوبة: صعب. تجنّب الأسئلة البديهية والمعروفة للجميع. اختر معلومات دقيقة وتفصيلية تتطلب معرفة جيدة بالموضوع (تواريخ محددة، تفاصيل فرعية، معلومات أقل شيوعاً)، لكن دون أن تكون مستحيلة أو غير قابلة للتحقق.",
+          source ? "غطِّ أجزاء مختلفة من النص ولا تركز على فقرة واحدة، وتأكد أن كل إجابة صحيحة موجودة فعلاً في النص." : "",
           "إذا كان التصنيف يشمل أكثر من مجال، وزّع الأسئلة بالتساوي بين كل المجالات المختارة ولا تركز على واحد فقط.",
           "الصيغة: مصفوفة JSON، كل عنصر حسب نوعه:",
           ...typeEntries.map(([type, n]) => `- ${n} سؤال من نوع "${type}": ${buildSchema(type, withImages)}`),
