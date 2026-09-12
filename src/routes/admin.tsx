@@ -214,6 +214,9 @@ function Admin() {
   const [generated, setGenerated] = useState<Question[] | null>(null);
   const [withImages, setWithImages] = useState(false);
   const [autoTypes, setAutoTypes] = useState<Question["type"][]>(["normal"]);
+  const [sourceText, setSourceText] = useState("");
+  const [sourceName, setSourceName] = useState<string | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
 
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
@@ -535,6 +538,73 @@ function Admin() {
                 </div>
               </div>
 
+              <div className="rounded-2xl bg-white/5 p-3">
+                <Label>أو ارفع ملف (PDF أو TXT) وولّد الأسئلة منه</Label>
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.md,application/pdf,text/plain"
+                  className="mt-2 block w-full text-sm"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setSourceLoading(true);
+                    try {
+                      let text = "";
+                      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+                        const pdfjs: any = await import("pdfjs-dist");
+                        pdfjs.GlobalWorkerOptions.workerSrc = (
+                          await import("pdfjs-dist/build/pdf.worker.min.mjs?url")
+                        ).default;
+                        const buf = await file.arrayBuffer();
+                        const doc = await pdfjs.getDocument({ data: buf }).promise;
+                        const pages: string[] = [];
+                        for (let i = 1; i <= Math.min(doc.numPages, 40); i++) {
+                          const page = await doc.getPage(i);
+                          const content = await page.getTextContent();
+                          pages.push(content.items.map((it: any) => it.str ?? "").join(" "));
+                        }
+                        text = pages.join("\n");
+                      } else {
+                        text = await file.text();
+                      }
+                      text = text.replace(/\s+/g, " ").trim();
+                      if (!text) {
+                        toast.error("لم نتمكن من قراءة نص من الملف (قد يكون صوراً ممسوحة ضوئياً)");
+                        setSourceText("");
+                        setSourceName(null);
+                      } else {
+                        setSourceText(text);
+                        setSourceName(file.name);
+                        toast.success(`تم قراءة الملف (${text.length} حرف)`);
+                      }
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "تعذر قراءة الملف");
+                    } finally {
+                      setSourceLoading(false);
+                    }
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {sourceLoading
+                    ? "جارٍ قراءة الملف…"
+                    : sourceName
+                      ? `سيتم توليد الأسئلة من: ${sourceName} (${sourceText.length} حرف)`
+                      : "لو رفعت ملف هيتم توليد الأسئلة من محتواه بدل التصنيفات."}
+                </p>
+                {sourceName ? (
+                  <Button
+                    variant="secondary"
+                    className="mt-2 h-9"
+                    onClick={() => {
+                      setSourceText("");
+                      setSourceName(null);
+                    }}
+                  >
+                    إزالة الملف
+                  </Button>
+                ) : null}
+              </div>
+
               <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-sm font-semibold">
                 <input
                   type="checkbox"
@@ -600,6 +670,7 @@ function Admin() {
                             defaultPoints: state.settings.defaultPoints,
                             distribution,
                             avoid,
+                            ...(sourceText ? { sourceText } : {}),
                           }),
                         });
                         if (!res.ok) {
