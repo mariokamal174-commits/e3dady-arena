@@ -28,8 +28,12 @@ export interface Member {
   photoUrl?: string;
 }
 
+export type GameMode = "teams" | "solo";
+
 export interface GameSettings {
   title: string;
+  /** teams = group play, solo = every player competes alone */
+  mode: GameMode;
   defaultTimer: number;
   stealTimer: number;
   speedTimer: number;
