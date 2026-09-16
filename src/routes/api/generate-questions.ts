@@ -45,7 +45,10 @@ export const Route = createFileRoute("/api/generate-questions")({
           distribution = {},
           avoid = [],
           sourceText = "",
+          language = "ar",
         } = (await request.json()) as Body;
+
+        const langRule = LANGUAGE_RULES[language] ?? LANGUAGE_RULES["ar"]!;
 
         const key = process.env["LOVABLE_API_KEY"];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
