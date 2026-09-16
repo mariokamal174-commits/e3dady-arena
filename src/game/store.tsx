@@ -554,7 +554,12 @@ interface Ctx {
   setAdminUnlocked: (v: boolean) => void;
 }
 
-const GameContext = createContext<Ctx | null>(null);
+// Keep a single context instance even if this module gets evaluated twice
+// (dev HMR / route code-splitting can create duplicate module instances,
+// which would make useGame throw "must be used inside <GameProvider>").
+const globalScope = globalThis as unknown as { __quizGameContext?: React.Context<Ctx | null> };
+const GameContext = globalScope.__quizGameContext ?? createContext<Ctx | null>(null);
+globalScope.__quizGameContext = GameContext;
 
 function loadPersisted(pathname = "/"): GameState | null {
   if (typeof window === "undefined") return null;
