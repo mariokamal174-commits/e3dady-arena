@@ -95,7 +95,8 @@ export const Route = createFileRoute("/api/generate-questions")({
         const source = String(sourceText || "").slice(0, 20000).trim();
 
         const systemParts = [
-          "أنت مولّد أسئلة مسابقات باللغة العربية. أخرج JSON فقط بدون أي شرح.",
+          "أنت مولّد أسئلة مسابقات. أخرج JSON فقط بدون أي شرح.",
+          langRule,
           source
             ? `ولّد ${requestedTotal} سؤالاً معتمداً حصرياً على النص المرفق التالي، ولا تستخدم أي معلومة من خارجه:\n"""\n${source}\n"""`
             : `ولّد ${requestedTotal} سؤال اختيار من متعدد أو سؤال شفوي عن: ${cats}.`,
