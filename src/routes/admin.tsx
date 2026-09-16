@@ -691,6 +691,7 @@ function Admin() {
                             defaultPoints: state.settings.defaultPoints,
                             distribution,
                             avoid,
+                            language: autoLanguage,
                             ...(sourceText ? { sourceText } : {}),
                           }),
                         });
