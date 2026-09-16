@@ -214,6 +214,7 @@ function Admin() {
   const [generated, setGenerated] = useState<Question[] | null>(null);
   const [withImages, setWithImages] = useState(false);
   const [autoTypes, setAutoTypes] = useState<Question["type"][]>(["normal"]);
+  const [autoLanguage, setAutoLanguage] = useState<"ar" | "ar-eg" | "en">("ar");
   const [sourceText, setSourceText] = useState("");
   const [sourceName, setSourceName] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
