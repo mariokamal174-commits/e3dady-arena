@@ -15,6 +15,7 @@ export const TEAM_ICONS = ["🦊", "🐺", "🦁", "🐯", "🦅", "🐙", "🐉
 
 export const demoSettings: GameSettings = {
   title: "Quiz Arena Live",
+  mode: "teams",
   defaultTimer: 20,
   stealTimer: 10,
   speedTimer: 10,

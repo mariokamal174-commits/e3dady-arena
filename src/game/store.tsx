@@ -134,6 +134,12 @@ function loadQuestion(state: GameState, index: number): GameState {
 
 function award(state: GameState, teamId: string, points: number): GameState {
   const question = currentQuestion(state);
+  // In solo mode the player is their own answerer — no manual pick needed.
+  const soloSelfId =
+    state.settings.mode === "solo"
+      ? state.teams.find((t) => t.id === teamId)?.members?.[0]?.id
+      : undefined;
+  const answererId = state.lastAnswerer?.memberId ?? soloSelfId;
   return {
     ...state,
     teams: state.teams.map((t) => (t.id === teamId ? { ...t, score: t.score + points } : t)),
@@ -146,7 +152,7 @@ function award(state: GameState, teamId: string, points: number): GameState {
       kind: "correct",
       points,
       teamId,
-      ...(state.lastAnswerer?.memberId ? { answererId: state.lastAnswerer.memberId } : {}),
+      ...(answererId ? { answererId } : {}),
     },
     history: question
       ? [
