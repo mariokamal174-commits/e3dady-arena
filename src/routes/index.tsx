@@ -74,23 +74,56 @@ function GameSetup() {
   const [editingMembersFor, setEditingMembersFor] = useState<string | null>(null);
   const [localMembers, setLocalMembers] = useState<Member[]>([]);
 
-  const updateTeam = (id: string, patch: Partial<Team>) =>
-    dispatch({ type: "SET_TEAMS", teams: teams.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
+  const solo = (settings.mode ?? "teams") === "solo";
 
-  const addTeam = () =>
+  const updateTeam = (id: string, patch: Partial<Team>) =>
+    dispatch({
+      type: "SET_TEAMS",
+      teams: teams.map((t) => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...patch };
+        // In solo mode the player IS the team — keep their member entry in sync
+        // so the celebration card can show their name/photo.
+        if (solo && patch.name !== undefined) {
+          const self = next.members?.[0];
+          next.members = [{ id: self?.id ?? `${id}-self`, name: next.name, photoUrl: self?.photoUrl }];
+        }
+        return next;
+      }),
+    });
+
+  const uploadPlayerPhoto = async (teamId: string, file: File) => {
+    try {
+      const path = `avatars/${teamId}/${crypto.randomUUID()}-${file.name}`;
+      const { data, error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const photoUrl = supabase.storage.from("avatars").getPublicUrl(data.path).data.publicUrl;
+      const team = teams.find((t) => t.id === teamId);
+      updateTeam(teamId, { members: [{ id: `${teamId}-self`, name: team?.name ?? "", photoUrl }] });
+    } catch (e) {
+      console.error(e);
+      window.alert("فشل رفع الصورة. تأكد من إعداد الـ storage bucket 'avatars'.");
+    }
+  };
+
+  const addTeam = () => {
+    const id = crypto.randomUUID();
+    const name = solo ? `Player ${teams.length + 1}` : `Team ${teams.length + 1}`;
     dispatch({
       type: "SET_TEAMS",
       teams: [
         ...teams,
         {
-          id: crypto.randomUUID(),
-          name: `Team ${teams.length + 1}`,
+          id,
+          name,
           color: TEAM_PALETTE[teams.length % TEAM_PALETTE.length]!,
           icon: TEAM_ICONS[teams.length % TEAM_ICONS.length]!,
           score: 0,
+          ...(solo ? { members: [{ id: `${id}-self`, name }] } : {}),
         },
       ],
     });
+  };
 
   const start = () => {
     dispatch({ type: "START_GAME" });
