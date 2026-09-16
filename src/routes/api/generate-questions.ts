@@ -10,6 +10,14 @@ type Body = {
   avoid?: string[];
   /** Raw text extracted from an uploaded document (PDF/TXT) to base questions on. */
   sourceText?: string;
+  /** Output language for the generated questions. */
+  language?: "ar" | "ar-eg" | "en";
+};
+
+const LANGUAGE_RULES: Record<string, string> = {
+  ar: "اكتب كل الأسئلة والاختيارات والشروحات باللغة العربية الفصحى فقط.",
+  "ar-eg": "اكتب كل الأسئلة والاختيارات والشروحات باللهجة المصرية العامية فقط (كلام بسيط زي الكلام العادي).",
+  en: "Write every question, choice, answer and explanation in English only. Do not use Arabic at all.",
 };
 
 const VALID_TYPES = ["normal", "steal", "speed", "oral"] as const;
