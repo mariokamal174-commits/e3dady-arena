@@ -500,6 +500,26 @@ function Admin() {
                 </div>
 
                 <div>
+                  <Label>لغة الأسئلة</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {([
+                      { key: "ar", label: "عربي فصحى" },
+                      { key: "ar-eg", label: "عامية مصرية" },
+                      { key: "en", label: "English" },
+                    ] as const).map((l) => (
+                      <button
+                        key={l.key}
+                        type="button"
+                        onClick={() => setAutoLanguage(l.key)}
+                        className={`rounded-full px-4 py-2 text-sm ${autoLanguage === l.key ? "bg-primary text-primary-foreground" : "bg-white/5"}`}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
                   <Label>عدد الأسئلة</Label>
                   <Input
                     type="number"
