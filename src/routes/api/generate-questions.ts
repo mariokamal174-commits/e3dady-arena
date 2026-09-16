@@ -10,6 +10,14 @@ type Body = {
   avoid?: string[];
   /** Raw text extracted from an uploaded document (PDF/TXT) to base questions on. */
   sourceText?: string;
+  /** Output language for the generated questions. */
+  language?: "ar" | "ar-eg" | "en";
+};
+
+const LANGUAGE_RULES: Record<string, string> = {
+  ar: "اكتب كل الأسئلة والاختيارات والشروحات باللغة العربية الفصحى فقط.",
+  "ar-eg": "اكتب كل الأسئلة والاختيارات والشروحات باللهجة المصرية العامية فقط (كلام بسيط زي الكلام العادي).",
+  en: "Write every question, choice, answer and explanation in English only. Do not use Arabic at all.",
 };
 
 const VALID_TYPES = ["normal", "steal", "speed", "oral"] as const;
@@ -37,7 +45,10 @@ export const Route = createFileRoute("/api/generate-questions")({
           distribution = {},
           avoid = [],
           sourceText = "",
+          language = "ar",
         } = (await request.json()) as Body;
+
+        const langRule = LANGUAGE_RULES[language] ?? LANGUAGE_RULES["ar"]!;
 
         const key = process.env["LOVABLE_API_KEY"];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
@@ -84,7 +95,8 @@ export const Route = createFileRoute("/api/generate-questions")({
         const source = String(sourceText || "").slice(0, 20000).trim();
 
         const systemParts = [
-          "أنت مولّد أسئلة مسابقات باللغة العربية. أخرج JSON فقط بدون أي شرح.",
+          "أنت مولّد أسئلة مسابقات. أخرج JSON فقط بدون أي شرح.",
+          langRule,
           source
             ? `ولّد ${requestedTotal} سؤالاً معتمداً حصرياً على النص المرفق التالي، ولا تستخدم أي معلومة من خارجه:\n"""\n${source}\n"""`
             : `ولّد ${requestedTotal} سؤال اختيار من متعدد أو سؤال شفوي عن: ${cats}.`,
