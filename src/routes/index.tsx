@@ -86,7 +86,9 @@ function GameSetup() {
         // so the celebration card can show their name/photo.
         if (solo && patch.name !== undefined) {
           const self = next.members?.[0];
-          next.members = [{ id: self?.id ?? `${id}-self`, name: next.name, photoUrl: self?.photoUrl }];
+          next.members = [
+            { id: self?.id ?? `${id}-self`, name: next.name, ...(self?.photoUrl ? { photoUrl: self.photoUrl } : {}) },
+          ];
         }
         return next;
       }),
