@@ -158,10 +158,27 @@ function GameSetup() {
       <div className="mt-10 grid gap-5 lg:grid-cols-[1.15fr_1fr]">
         <section className="glass rounded-3xl p-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl font-black">Teams</h2>
+            <h2 className="font-display text-2xl font-black">{solo ? "Players" : "Teams"}</h2>
             <Button size="sm" variant="secondary" className="rounded-full" onClick={addTeam}>
-              <Plus className="size-4" /> Add team
+              <Plus className="size-4" /> {solo ? "Add player" : "Add team"}
             </Button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/5 p-1.5">
+            {(["teams", "solo"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => dispatch({ type: "SET_SETTINGS", settings: { mode } })}
+                className={`rounded-xl py-2.5 text-sm font-black transition-colors ${
+                  (settings.mode ?? "teams") === mode
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "teams" ? "👥 فرق" : "🧍 كل واحد لوحده"}
+              </button>
+            ))}
           </div>
 
           <div className="mt-5 grid gap-3">
@@ -203,22 +220,49 @@ function GameSetup() {
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 p-1.5">
-                  <span className="px-1 text-xs font-bold text-primary">
-                    {team.members?.length ?? 0} members
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="h-9 rounded-lg px-3 font-bold shadow-sm"
-                    onClick={() => {
-                      setEditingMembersFor(team.id);
-                      setLocalMembers(team.members ? team.members.map((m) => ({ ...m })) : []);
-                    }}
-                  >
-                    <Pencil className="size-4" /> Edit members
-                  </Button>
-                </div>
+                {solo ? (
+                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 p-1.5 px-3">
+                    {team.members?.[0]?.photoUrl ? (
+                      <img
+                        src={team.members[0].photoUrl}
+                        alt={team.name}
+                        className="size-9 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xl">📷</span>
+                    )}
+                    <span className="text-xs font-bold text-primary">
+                      {team.members?.[0]?.photoUrl ? "Change photo" : "Add photo"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadPlayerPhoto(team.id, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 p-1.5">
+                    <span className="px-1 text-xs font-bold text-primary">
+                      {team.members?.length ?? 0} members
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-9 rounded-lg px-3 font-bold shadow-sm"
+                      onClick={() => {
+                        setEditingMembersFor(team.id);
+                        setLocalMembers(team.members ? team.members.map((m) => ({ ...m })) : []);
+                      }}
+                    >
+                      <Pencil className="size-4" /> Edit members
+                    </Button>
+                  </div>
+                )}
                 {adminUnlocked ? (
                   <>
                     <Input
