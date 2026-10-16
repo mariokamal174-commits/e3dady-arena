@@ -54,22 +54,22 @@ export const jamesQuestions: Question[] = [
   {
     "id": "james-1-6",
     "chapter": 1,
-    "text": "اكمل إنما ان كان احدكم تعوزه----- فليطلب من -----الذي يعطي الجميع ----- و لا يعير ------                            حكمه الله بسخاء فسيعطى له",
+    "text": "اكمل إنما ان كان احدكم تعوزه----- فليطلب من -----الذي يعطي الجميع ----- و لا يعير ------",
     "choices": [],
     "correctIndex": 0,
     "type": "oral",
     "points": 5,
-    "explanation": "شروط طلب الحكمه ؟و ايه الوصف اللى اتوصفت بيه ؟"
+    "explanation": "حكمه الله بسخاء فسيعطى له"
   },
   {
     "id": "james-1-7",
     "chapter": 1,
-    "text": "ليطلب بايمان غير مرتاب البتة لان المرتاب يشبه موجا من البحر تخبطه الريح و تدفعه",
+    "text": "شروط طلب الحكمه ؟و ايه الوصف اللى اتوصفت بيه ؟",
     "choices": [],
     "correctIndex": 0,
     "type": "oral",
     "points": 10,
-    "explanation": ""
+    "explanation": "ليطلب بايمان غير مرتاب البتة لان المرتاب يشبه موجا من البحر تخبطه الريح و تدفعه"
   },
   {
     "id": "james-1-8",
@@ -142,8 +142,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "27 عدد"
   },
   {
-    "id": "james-1-15",
-    "chapter": 1,
+    "id": "james-2-15",
+    "chapter": 2,
     "text": "فانه ان دخل إلى مجمعكم رجل بخواتم ذهب في لباس بهي و دخل أيضا فقير بلباس وسخ فنظرتم إلى اللابس اللباس البهي و قلتم له اجلس أنت هنا حسنا و قلتم للفقير قف أنت هناك أو اجلس هنا تحت موطئ قدمي ايه الوصف للفعل ده من  الرساله",
     "choices": [],
     "correctIndex": 0,
@@ -152,8 +152,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "المحاباه"
   },
   {
-    "id": "james-1-16",
-    "chapter": 1,
+    "id": "james-2-16",
+    "chapter": 2,
     "text": "اذكر ايه قالها السيد المسيح من الاصحاح و اذكر عددها ؟",
     "choices": [],
     "correctIndex": 0,
@@ -162,8 +162,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "تحب قريبك كنفسك عدد 8"
   },
   {
-    "id": "james-1-17",
-    "chapter": 1,
+    "id": "james-2-17",
+    "chapter": 2,
     "text": "ايه وصف المحابين ؟",
     "choices": [],
     "correctIndex": 0,
@@ -172,8 +172,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "معتدين للناموس"
   },
   {
-    "id": "james-1-18",
-    "chapter": 1,
+    "id": "james-2-18",
+    "chapter": 2,
     "text": "اكمل لان الحكم هو بلا رحمة لمن------ و الرحمة تفتخر على ----",
     "choices": [],
     "correctIndex": 0,
@@ -182,8 +182,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "لم يعمل رحمة الحكم"
   },
   {
-    "id": "james-1-19",
-    "chapter": 1,
+    "id": "james-2-19",
+    "chapter": 2,
     "text": "استخرج من الاصحاح الثانى عدد يؤكد ان الاعمال لازمه للخلاص ؟",
     "choices": [],
     "correctIndex": 0,
@@ -192,8 +192,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "ما المنفعة يا اخوتي ان قال احد ان له ايمانا و لكن ليس له أعمال هل يقدر الايمان ان يخلصه عدد 14"
   },
   {
-    "id": "james-1-20",
-    "chapter": 1,
+    "id": "james-2-20",
+    "chapter": 2,
     "text": "ما وصف الايمان بدون اعمال ؟",
     "choices": [],
     "correctIndex": 0,
@@ -202,8 +202,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "ميت فى ذاته"
   },
   {
-    "id": "james-1-21",
-    "chapter": 1,
+    "id": "james-2-21",
+    "chapter": 2,
     "text": "لكن يقول قائل أنت لك---- و أنا لي ارني------- بدون اعمالك و أنا اريك ----- ايماني",
     "choices": [],
     "correctIndex": 0,
@@ -212,8 +212,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "ايمان أعمال ايمانك باعمالي"
   },
   {
-    "id": "james-1-22",
-    "chapter": 1,
+    "id": "james-2-22",
+    "chapter": 2,
     "text": "اذكر مثالين للاعمال التى تؤكد الايمان ؟",
     "choices": [],
     "correctIndex": 0,
@@ -222,8 +222,8 @@ export const jamesQuestions: Question[] = [
     "explanation": "ابراهيم – رحاب الزانيه"
   },
   {
-    "id": "james-1-23",
-    "chapter": 1,
+    "id": "james-2-23",
+    "chapter": 2,
     "text": "عدد اعداد الاصحاح الثانى ؟",
     "choices": [],
     "correctIndex": 0,
