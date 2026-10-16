@@ -11,6 +11,8 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { demoQuestions, demoSettings, demoTeams } from "./demo";
+import { jamesQuestions } from "./james-questions";
+import { TEAM_PALETTE, TEAM_ICONS } from "./demo";
 import { playSound, setSoundEnabled, setVolume, unlockAudio } from "./audio";
 import type {
   GameSettings,
@@ -58,6 +60,8 @@ export type Action =
   | { type: "SET_TEAMS"; teams: Team[] }
   | { type: "SET_QUESTIONS"; questions: Question[] }
   | { type: "START_GAME" }
+  | { type: "SET_CHAPTER_QUIZ"; enabled: boolean }
+  | { type: "PICK_CHAPTER_QUESTION"; questionId: string }
   | { type: "LOAD_QUESTION"; index: number }
   | { type: "TICK" }
   | { type: "EXPIRE" }
@@ -96,6 +100,7 @@ function currentQuestion(state: GameState): Question | undefined {
 
 function migrateQuestionPoints(questions: Question[], settings: GameSettings): Question[] {
   return questions.map((question) => {
+    if (question.chapter) return question;
     if (question.type === "speed" && question.points === initialState.settings.speedPoints) {
       return { ...question, points: settings.speedPoints };
     }
@@ -183,7 +188,7 @@ function afterWrong(state: GameState, teamId: string): GameState {
 
   const base = { ...penalized, attemptedTeamIds: attempted, selectedChoice: null, activeTeamId: null };
 
-  if (penalty === "pass") {
+  if (state.settings.chapterQuiz || penalty === "pass") {
     // Turn passes immediately — no steal, no buzz back in.
     return { ...base, phase: "reveal", revealed: true, running: false, feedback: { kind: "wrong", teamId } };
   }
@@ -234,6 +239,7 @@ export function reducer(state: GameState, action: Action): GameState {
       const oldDefault = state.settings.defaultPoints;
       const oldSpeed = state.settings.speedPoints;
       const questions = state.questions.map((q) => {
+        if (q.chapter) return q;
         if (q.type === "speed" && oldSpeed !== nextSettings.speedPoints && q.points === oldSpeed) {
           return { ...q, points: nextSettings.speedPoints };
         }
@@ -257,12 +263,41 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, teams: action.teams };
     case "SET_QUESTIONS":
       return { ...state, questions: action.questions };
+    case "SET_CHAPTER_QUIZ": {
+      if (action.enabled === Boolean(state.settings.chapterQuiz)) return state;
+      if (!action.enabled) {
+        return { ...state, settings: { ...state.settings, chapterQuiz: false },
+          questions: state.chapterBackup?.questions ?? state.questions,
+          teams: state.chapterBackup?.teams ?? state.teams, chapterBackup: undefined,
+          chapterUsedIds: [], chapterTurn: 0, phase: "idle", running: false };
+      }
+      return { ...state, settings: { ...state.settings, chapterQuiz: true, mode: "teams" },
+        chapterBackup: { questions: state.questions, teams: state.teams },
+        questions: jamesQuestions.map((q) => ({ ...q, choices: [...q.choices] })),
+        teams: Array.from({ length: 6 }, (_, i) => state.teams[i] ?? {
+          id: `chapter-team-${i + 1}`, name: `فريق ${i + 1}`, score: 0,
+          color: TEAM_PALETTE[i] ?? TEAM_PALETTE[0] ?? "", icon: TEAM_ICONS[i] ?? "",
+        }), chapterUsedIds: [], chapterTurn: 0, phase: "idle", running: false };
+    }
+    case "PICK_CHAPTER_QUESTION": {
+      if (!state.settings.chapterQuiz || state.phase !== "chapter-select") return state;
+      const index = state.questions.findIndex((q) => q.id === action.questionId && q.chapter);
+      if (index < 0 || state.chapterUsedIds?.includes(action.questionId)) return state;
+      const loaded = loadQuestion(state, index);
+      const team = state.teams[(state.chapterTurn ?? 0) % Math.max(1, state.teams.length)];
+      return { ...loaded, turnTeamId: team?.id ?? null, activeTeamId: team?.id ?? null,
+        chapterUsedIds: [...(state.chapterUsedIds ?? []), action.questionId] };
+    }
     case "START_GAME":
+      if (state.settings.chapterQuiz) return { ...state, phase: "chapter-select", running: false,
+        questionStarted: false, revealed: false, scored: false, feedback: null,
+        history: [], chapterUsedIds: [], chapterTurn: 0, activeTeamId: null, turnTeamId: null };
       return loadQuestion(
         { ...state, history: [], teams: state.teams.map((t) => ({ ...t })) },
         0,
       );
     case "LOAD_QUESTION":
+      if (state.settings.chapterQuiz) return state;
       return loadQuestion(state, action.index);
     case "TICK": {
       if (!state.running || state.timeLeft <= 0) return state;
@@ -270,6 +305,8 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "EXPIRE": {
       const question = currentQuestion(state);
+      if (state.settings.chapterQuiz) return { ...state, phase: "reveal", revealed: true,
+        running: false, feedback: { kind: "timeup" } };
       if (state.phase === "question") {
         if (question?.type === "oral") {
           return {
@@ -315,7 +352,7 @@ export function reducer(state: GameState, action: Action): GameState {
       const withChoice = { ...state, selectedChoice: action.choice };
       if (!correct) return afterWrong(withChoice, teamId);
 
-      const points =
+      const points = state.settings.chapterQuiz ? question.points :
         state.phase === "steal-answer"
           ? state.settings.stealPoints
           : question.type === "speed"
@@ -325,6 +362,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "ORAL_SELECT": {
       const q = currentQuestion(state);
+      if (state.settings.chapterQuiz && (state.phase !== "question" || action.teamId !== state.turnTeamId)) return state;
       if (!q || q.type !== "oral") return state;
       if (state.attemptedTeamIds.includes(action.teamId)) return state;
       return {
@@ -337,9 +375,10 @@ export function reducer(state: GameState, action: Action): GameState {
     }
     case "ORAL_RESULT": {
       const question = currentQuestion(state);
+      if (state.settings.chapterQuiz && (!state.questionStarted || state.scored || state.phase !== "question" || action.teamId !== state.turnTeamId)) return state;
       if (!question || question.type !== "oral") return state;
       if (action.correct) {
-        const points =
+        const points = state.settings.chapterQuiz ? question.points :
           state.phase === "steal-answer" ? state.settings.stealPoints : state.settings.defaultPoints;
 
         return award({ ...state, activeTeamId: action.teamId, running: false }, action.teamId, points);
@@ -372,6 +411,13 @@ export function reducer(state: GameState, action: Action): GameState {
       return state;
     }
     case "NEXT": {
+      if (state.settings.chapterQuiz) {
+        if (state.phase === "chapter-select") return state;
+        const available = state.questions.some((q) => q.chapter && !state.chapterUsedIds?.includes(q.id));
+        return { ...state, phase: available ? "chapter-select" : "over", running: false,
+          chapterTurn: (state.chapterTurn ?? 0) + 1, activeTeamId: null, turnTeamId: null,
+          questionStarted: false, revealed: false, scored: false, feedback: null };
+      }
       const next = state.currentIndex + 1;
       if (next >= state.questions.length) {
         return { ...state, phase: "over", running: false, feedback: null };
@@ -379,15 +425,19 @@ export function reducer(state: GameState, action: Action): GameState {
       return loadQuestion(state, next);
     }
     case "PREV":
+      if (state.settings.chapterQuiz) return state;
       return loadQuestion(state, Math.max(0, state.currentIndex - 1));
     case "RESTART_QUESTION":
+      if (state.settings.chapterQuiz) return state;
       return loadQuestion(state, state.currentIndex);
     case "SKIP": {
+      if (state.settings.chapterQuiz) return reducer(state, { type: "NEXT" });
       const next = state.currentIndex + 1;
       if (next >= state.questions.length) return { ...state, phase: "over", running: false };
       return loadQuestion(state, next);
     }
     case "REVEAL":
+      if (state.phase === "chapter-select") return state;
       return { ...state, revealed: true, running: false, phase: "reveal", feedback: null };
     case "SET_TIME":
       return { ...state, timeLeft: Math.max(0, Math.round(action.seconds)) };
@@ -401,6 +451,7 @@ export function reducer(state: GameState, action: Action): GameState {
     case "PAUSE":
       return { ...state, running: false };
     case "RESUME":
+      if (state.phase === "chapter-select") return state;
       return state.timeLeft > 0 && state.phase !== "reveal" && state.phase !== "over"
         ? { ...state, running: true, questionStarted: true }
         : state;
@@ -487,6 +538,7 @@ export function reducer(state: GameState, action: Action): GameState {
     case "CLEAR_LIFELINE_NOTICE":
       return { ...state, lifelineNotice: null };
     case "LIFELINE": {
+      if (state.settings.chapterQuiz && (state.phase === "chapter-select" || action.kind === "swap")) return state;
       const used = state.lifelinesUsed[action.teamId] ?? [];
       if (used.includes(action.kind)) return state;
       const team = state.teams.find((t) => t.id === action.teamId);
@@ -574,6 +626,9 @@ function loadPersisted(pathname = "/"): GameState | null {
       settings: { ...initialState.settings, ...parsed.settings },
       teams: parsed.teams,
       questions: parsed.questions,
+      chapterBackup: parsed.chapterBackup,
+      chapterUsedIds: parsed.chapterUsedIds ?? [],
+      chapterTurn: parsed.chapterTurn ?? 0,
     };
 
     if (pathname === "/watch") return null;

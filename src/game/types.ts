@@ -11,6 +11,7 @@ export interface Question {
   imageUrl?: string;
   soundUrl?: string;
   timer?: number;
+  chapter?: number;
 }
 
 export interface Team {
@@ -34,6 +35,7 @@ export interface GameSettings {
   title: string;
   /** teams = group play, solo = every player competes alone */
   mode: GameMode;
+  chapterQuiz?: boolean;
   defaultTimer: number;
   stealTimer: number;
   speedTimer: number;
@@ -51,6 +53,7 @@ export type PenaltyMode = "none" | "half" | "pass";
 
 export type Phase =
   | "idle"
+  | "chapter-select"
   | "question"
   | "steal-select"
   | "steal-answer"
@@ -120,4 +123,7 @@ export interface GameState {
   lifelineNotice: string | null;
   scoreArchives: ScoreArchive[];
   questionArchives: QuestionArchive[];
+  chapterUsedIds?: string[];
+  chapterTurn?: number;
+  chapterBackup?: { questions: Question[]; teams: Team[] };
 }
