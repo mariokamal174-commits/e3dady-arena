@@ -159,16 +159,17 @@ function GameSetup() {
         <section className="glass rounded-3xl p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl font-black">{solo ? "Players" : "Teams"}</h2>
-            <Button size="sm" variant="secondary" className="rounded-full" onClick={addTeam}>
+            <Button size="sm" variant="secondary" className="rounded-full" onClick={addTeam} disabled={settings.chapterQuiz}>
               <Plus className="size-4" /> {solo ? "Add player" : "Add team"}
             </Button>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/5 p-1.5">
             {(["teams", "solo"] as const).map((mode) => (
-              <button
+              <Button
                 key={mode}
                 type="button"
+                disabled={settings.chapterQuiz}
                 onClick={() => dispatch({ type: "SET_SETTINGS", settings: { mode } })}
                 className={`rounded-xl py-2.5 text-sm font-black transition-colors ${
                   (settings.mode ?? "teams") === mode
@@ -177,8 +178,14 @@ function GameSetup() {
                 }`}
               >
                 {mode === "teams" ? "👥 فرق" : "🧍 كل واحد لوحده"}
-              </button>
+              </Button>
             ))}
+          </div>
+
+          <div className="mt-5 flex items-center justify-between gap-4 border-y border-border py-4" dir="rtl">
+            <Label htmlFor="chapter-quiz" className="text-base font-bold">رسالة يعقوب · وضع الإصحاحات المؤقت</Label>
+            <Switch id="chapter-quiz" checked={Boolean(settings.chapterQuiz)}
+              onCheckedChange={(enabled) => dispatch({ type: "SET_CHAPTER_QUIZ", enabled })} />
           </div>
 
           <div className="mt-5 grid gap-3">

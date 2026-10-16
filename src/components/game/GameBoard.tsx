@@ -14,6 +14,7 @@ import { Scoreboard } from "./Scoreboard";
 import { SpeedQuestion } from "./SpeedQuestion";
 import { StealMode } from "./StealMode";
 import { WinnerScreen } from "./WinnerScreen";
+import { ChapterBoard } from "./ChapterBoard";
 
 const PHASE_BADGE: Record<string, { label: string; className: string }> = {
   question: { label: "IN PLAY", className: "bg-accent/20 text-accent" },
@@ -76,6 +77,7 @@ export function GameBoard({ spectator = false }: { spectator?: boolean }) {
   }, [dispatch, state.running, state.phase, state.teams, state.attemptedTeamIds, canAnswer, spectator]);
 
   if (state.phase === "over") return <WinnerScreen />;
+  if (state.phase === "chapter-select") return <ChapterBoard spectator={spectator} />;
 
   if (state.phase === "idle") {
     return (
@@ -253,7 +255,7 @@ export function GameBoard({ spectator = false }: { spectator?: boolean }) {
             )}
           </AnimatePresence>
 
-          {question.type === "oral" &&
+          {question.type === "oral" && !notStarted &&
           (state.phase === "question" || state.phase === "steal-answer") &&
           state.activeTeamId &&
           !spectator ? (
@@ -308,11 +310,11 @@ export function GameBoard({ spectator = false }: { spectator?: boolean }) {
               className="glass flex flex-wrap items-center justify-between gap-4 rounded-3xl px-6 py-5"
             >
               <p className="font-display text-2xl font-black text-success">
-                ✅ Correct answer: {question.choices[question.correctIndex]}
+                ✅ Correct answer: {question.type === "oral" ? question.explanation : question.choices[question.correctIndex]}
               </p>
               {spectator ? null : (
                 <Button size="lg" className="rounded-full px-8 font-bold" onClick={() => dispatch({ type: "NEXT" })}>
-                  Next question →
+                  {state.settings.chapterQuiz ? "اختيار الإصحاح التالي ←" : "Next question →"}
                 </Button>
               )}
             </motion.div>

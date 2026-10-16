@@ -43,7 +43,7 @@ export function GameControls() {
 
         <div className="grid gap-3 px-4 pb-8">
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => dispatch({ type: "PREV" })}>
+            <Button variant="secondary" disabled={state.settings.chapterQuiz} onClick={() => dispatch({ type: "PREV" })}>
               <ChevronLeft className="size-4" /> Previous
             </Button>
             <Button onClick={() => dispatch({ type: "NEXT" })}>
@@ -56,7 +56,7 @@ export function GameControls() {
               {state.running ? <Pause className="size-4" /> : <Play className="size-4" />}
               {state.running ? "Pause" : "Resume"}
             </Button>
-            <Button variant="secondary" onClick={() => dispatch({ type: "RESTART_QUESTION" })}>
+            <Button variant="secondary" disabled={state.settings.chapterQuiz} onClick={() => dispatch({ type: "RESTART_QUESTION" })}>
               <RotateCcw className="size-4" /> Restart Q
             </Button>
             <Button variant="secondary" onClick={() => dispatch({ type: "SKIP" })}>
