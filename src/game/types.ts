@@ -125,5 +125,5 @@ export interface GameState {
   questionArchives: QuestionArchive[];
   chapterUsedIds?: string[];
   chapterTurn?: number;
-  chapterBackup?: { questions: Question[]; teams: Team[] };
+  chapterBackup?: { questions: Question[]; teams: Team[] } | undefined;
 }
