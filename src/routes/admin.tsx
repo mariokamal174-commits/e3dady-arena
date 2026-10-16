@@ -224,9 +224,18 @@ function Admin() {
   const [uploading, setUploading] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [batchChapter, setBatchChapter] = useState<number | null>(null);
 
   const questions = state.questions;
   const setQuestions = (next: Question[]) => dispatch({ type: "SET_QUESTIONS", questions: next });
+  const questionsForSelectedChapter = (addedQuestions: Question[]) => {
+    if (!state.settings.chapterQuiz) return addedQuestions;
+    if (batchChapter === null) {
+      toast.error("اختار الإصحاح قبل إضافة الأسئلة");
+      return null;
+    }
+    return addedQuestions.map((question) => ({ ...question, chapter: batchChapter }));
+  };
 
   const move = (index: number, dir: -1 | 1) => {
     const next = [...questions];
@@ -241,6 +250,10 @@ function Admin() {
 
   const saveQuestion = () => {
     if (!editing) return;
+    if (state.settings.chapterQuiz && !editing.chapter) {
+      toast.error("اختار الإصحاح قبل حفظ السؤال");
+      return;
+    }
     const exists = questions.some((q) => q.id === editing.id);
     setQuestions(exists ? questions.map((q) => (q.id === editing.id ? editing : q)) : [...questions, editing]);
     setEditing(null);
@@ -399,6 +412,11 @@ function Admin() {
                 {q.type.toUpperCase()}
               </span>
               <span className="min-w-40 flex-1 truncate font-semibold">{q.text || "Untitled question"}</span>
+              {state.settings.chapterQuiz && q.chapter ? (
+                <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
+                  الإصحاح {q.chapter}
+                </span>
+              ) : null}
               <span className="text-sm font-bold text-primary">{q.points} pts</span>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" onClick={() => move(i, -1)}>
@@ -789,6 +807,24 @@ function Admin() {
               {generated && (
                 <div className="space-y-3">
                   <h3 className="font-bold">Preview ({generated.length})</h3>
+                  {state.settings.chapterQuiz && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="generated-question-chapter">الإصحاح</Label>
+                      <select
+                        id="generated-question-chapter"
+                        value={batchChapter ?? ""}
+                        onChange={(event) =>
+                          setBatchChapter(event.target.value ? Number(event.target.value) : null)
+                        }
+                        className="h-11 w-full rounded-xl bg-white/5 px-3 outline-none"
+                      >
+                        <option value="">اختر الإصحاح</option>
+                        {[1, 2, 3, 4, 5].map((chapter) => (
+                          <option key={chapter} value={chapter}>الإصحاح {chapter}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="grid gap-2">
                     {generated.slice(0, 20).map((g, i) => (
                       <div key={g.id} className="rounded-2xl bg-white/5 p-3">
@@ -808,7 +844,13 @@ function Admin() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={() => setGenerated(null)}>Close preview</Button>
-                    <Button onClick={() => { setQuestions([...questions, ...(generated ?? [])]); setGenerated(null); setAutoOpen(false); }}>
+                    <Button onClick={() => {
+                      const addedQuestions = questionsForSelectedChapter(generated);
+                      if (!addedQuestions) return;
+                      setQuestions([...questions, ...addedQuestions]);
+                      setGenerated(null);
+                      setAutoOpen(false);
+                    }}>
                       Add to bank
                     </Button>
                   </div>
@@ -823,6 +865,24 @@ function Admin() {
             <DialogHeader>
               <DialogTitle className="font-display text-2xl">Paste questions</DialogTitle>
             </DialogHeader>
+            {state.settings.chapterQuiz && (
+              <div className="space-y-1.5">
+                <Label htmlFor="pasted-question-chapter">الإصحاح</Label>
+                <select
+                  id="pasted-question-chapter"
+                  value={batchChapter ?? ""}
+                  onChange={(event) =>
+                    setBatchChapter(event.target.value ? Number(event.target.value) : null)
+                  }
+                  className="h-11 w-full rounded-xl bg-white/5 px-3 outline-none"
+                >
+                  <option value="">اختر الإصحاح</option>
+                  {[1, 2, 3, 4, 5].map((chapter) => (
+                    <option key={chapter} value={chapter}>الإصحاح {chapter}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <Textarea
               value={pasteText}
               onChange={(event) => setPasteText(event.target.value)}
@@ -838,7 +898,9 @@ function Admin() {
                     toast.error("لم يتم العثور على أسئلة صالحة");
                     return;
                   }
-                  setQuestions([...questions, ...imported]);
+                  const addedQuestions = questionsForSelectedChapter(imported);
+                  if (!addedQuestions) return;
+                  setQuestions([...questions, ...addedQuestions]);
                   setPasteText("");
                   setPasteOpen(false);
                   toast.success(`تمت إضافة ${imported.length} أسئلة`);
@@ -1043,6 +1105,28 @@ function Admin() {
                     className="min-h-20 rounded-xl bg-white/5 text-lg"
                   />
                 </div>
+
+                {state.settings.chapterQuiz && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="question-chapter">الإصحاح</Label>
+                    <select
+                      id="question-chapter"
+                      value={editing.chapter ?? ""}
+                      onChange={(event) => {
+                        const next = { ...editing };
+                        if (!event.target.value) delete next.chapter;
+                        else next.chapter = Number(event.target.value);
+                        setEditing(next);
+                      }}
+                      className="h-11 w-full rounded-xl bg-white/5 px-3 outline-none"
+                    >
+                      <option value="">اختر الإصحاح</option>
+                      {[1, 2, 3, 4, 5].map((chapter) => (
+                        <option key={chapter} value={chapter}>الإصحاح {chapter}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   {editing.choices.map((choice, i) => (
